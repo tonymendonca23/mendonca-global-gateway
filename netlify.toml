@@ -1,0 +1,23 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Note: For Astro SSR on Netlify, the @astrojs/netlify adapter handles routing
+# SPA fallback redirects are NOT needed and will break SSR
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Environment variables (set in Netlify dashboard)
+# TURSO_DATABASE_URL
+# TURSO_AUTH_TOKEN
+# RESEND_API_KEY
+# AUTH_SECRET
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# MMG_NUMBER
+# WHATSAPP_NUMBER

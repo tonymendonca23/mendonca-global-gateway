@@ -1,0 +1,195 @@
+import type { APIRoute } from 'astro';
+import db from '../../../../lib/db';
+
+export const GET: APIRoute = async ({ params, locals }) => {
+  // Check auth
+  if (!locals.staff) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const packageId = params.id;
+
+  if (!packageId) {
+    return new Response('Package ID required', { status: 400 });
+  }
+
+  // Get package details
+  const result = await db.execute({
+    sql: `
+      SELECT p.*, u.email as customer_email, u.name as customer_name
+      FROM packages p
+      LEFT JOIN users u ON p.customer_id = u.id
+      WHERE p.id = ?
+    `,
+    args: [packageId],
+  });
+
+  const pkg = result.rows[0] as any;
+
+  if (!pkg) {
+    return new Response('Package not found', { status: 404 });
+  }
+
+  // Return edit form HTML for HTMX
+  const html = `
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-900">Edit Package</h2>
+        <button 
+          onclick="document.getElementById('modal').classList.add('hidden')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
+      
+      <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+        <div class="text-sm text-gray-500">Tracking Number</div>
+        <div class="font-mono font-bold text-primary">${pkg.original_tracking_number || pkg.mgg_tracking_number || ''
+    }</div>
+      </div>
+      
+      <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+        <div class="text-sm text-gray-500">Customer</div>
+        <div class="font-medium">${pkg.customer_name || 'Unknown'}</div>
+        <div class="text-sm text-gray-500">${pkg.customer_email}</div>
+      </div>
+      
+      <form 
+        hx-patch="/api/admin/packages/${packageId}" 
+        hx-target="this"
+        hx-swap="outerHTML"
+        class="space-y-4"
+      >
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select name="status" class="input w-full" required>
+            <option value="at_warehouse" ${pkg.status === 'at_warehouse' ? 'selected' : ''}>📦 At US Warehouse</option>
+            <option value="in_transit" ${pkg.status === 'in_transit' ? 'selected' : ''}>✈️ In Transit</option>
+            <option value="customs" ${pkg.status === 'customs' ? 'selected' : ''}>📋 Customs Clearance</option>
+            <option value="ready" ${pkg.status === 'ready' ? 'selected' : ''}>✅ Ready for Pickup</option>
+            <option value="picked_up" ${pkg.status === 'picked_up' ? 'selected' : ''}>📦 Picked Up</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+          <input 
+            type="number" 
+            name="weight_lbs" 
+            value="${pkg.weight_lbs || ''}" 
+            step="0.1"
+            class="input w-full"
+            placeholder="Enter weight"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Value (USD)</label>
+          <input 
+            type="number" 
+            name="value_usd" 
+            value="${pkg.value_usd || ''}" 
+            step="0.01"
+            class="input w-full"
+            placeholder="Enter value"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea 
+            name="notes" 
+            class="input w-full"
+            rows="2"
+            placeholder="Add notes about this package"
+          >${pkg.notes || ''}</textarea>
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button type="submit" class="btn-primary flex-1">
+            Save Changes
+          </button>
+          <button 
+            type="button"
+            onclick="document.getElementById('modal').classList.add('hidden')"
+            class="btn-secondary flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html' },
+  });
+};
+
+export const PATCH: APIRoute = async ({ params, request, locals }) => {
+  // Check auth
+  if (!locals.staff) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const packageId = params.id;
+
+  if (!packageId) {
+    return new Response('Package ID required', { status: 400 });
+  }
+
+  const formData = await request.formData();
+  const status = formData.get('status')?.toString();
+  const weightLbs = formData.get('weight_lbs')?.toString();
+  const valueUsd = formData.get('value_usd')?.toString();
+  const notes = formData.get('notes')?.toString();
+
+  // Update package
+  await db.execute({
+    sql: `
+      UPDATE packages 
+      SET 
+        status = ?,
+        weight_lbs = ?,
+        value_usd = ?,
+        notes = ?,
+        status_updated_at = strftime('%s', 'now'),
+        received_at = CASE 
+          WHEN status = 'at_warehouse' AND ? != 'at_warehouse' THEN NULL
+          WHEN ? = 'at_warehouse' AND (SELECT status FROM packages WHERE id = ?) != 'at_warehouse' THEN strftime('%s', 'now')
+          ELSE received_at
+        END
+      WHERE id = ?
+    `,
+    args: [
+      status,
+      weightLbs ? parseFloat(weightLbs) : null,
+      valueUsd ? parseFloat(valueUsd) : null,
+      notes || null,
+      status,
+      status,
+      packageId,
+      packageId,
+    ],
+  });
+
+  // Return success message
+  const html = `
+    <div class="p-6 text-center">
+      <div class="text-5xl mb-4">✅</div>
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Package Updated</h3>
+      <p class="text-gray-500 mb-4">The package has been updated successfully.</p>
+      <button 
+        onclick="location.reload()"
+        class="btn-primary"
+      >
+        Close & Refresh
+      </button>
+    </div>
+  `;
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html' },
+  });
+};

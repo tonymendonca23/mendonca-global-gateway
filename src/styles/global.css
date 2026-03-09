@@ -1,0 +1,123 @@
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+@config "../../tailwind.config.mjs";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Custom theme configuration */
+@theme {
+  /* Primary color palette */
+  --color-primary-50: #f0f4f8;
+  --color-primary-100: #d9e2ec;
+  --color-primary-200: #bcccdc;
+  --color-primary-300: #9fb3c8;
+  --color-primary-400: #829ab1;
+  --color-primary-500: #627d98;
+  --color-primary-600: #486581;
+  --color-primary-700: #334e68;
+  --color-primary-800: #243b53;
+  --color-primary-900: #1a365d;
+  --color-primary: #1a365d;
+  --color-primary-light: #627d98;
+  --color-white-bg: #ffffff;
+
+  /* Accent color palette */
+  --color-accent-50: #fff7ed;
+  --color-accent-100: #ffedd5;
+  --color-accent-200: #fed7aa;
+  --color-accent-300: #fdba74;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;
+  --color-accent-600: #ea580c;
+  --color-accent-700: #c2410c;
+  --color-accent-800: #9a3412;
+  --color-accent-900: #7c2d12;
+  --color-accent: #ed8936;
+
+  /* Secondary color */
+  --color-secondary: #ed8936;
+
+  /* Success colors */
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-success-dark: #059669;
+
+  /* Warning colors */
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-dark: #d97706;
+
+  /* Error colors */
+  --color-error: #ef4444;
+  --color-error-light: #f87171;
+  --color-error-dark: #dc2626;
+
+  /* Custom text and background colors */
+  --color-text-dark: #1a202c;
+  --color-custom-bg: #1a365d;
+
+  /* Custom font family */
+  --font-heading: 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif';
+}
+
+/* Set Poppins as the default font for the project */
+html {
+  font-family: 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif';
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-gray-50 antialiased text-[0.95rem] md:text-base;
+}
+
+/* Manual dark theme overrides driven by the `dark` class on <html> */
+html.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+html.dark .card {
+  @apply bg-slate-900 border-slate-700 text-slate-100;
+}
+
+html.dark header {
+  @apply bg-slate-900/90 border-slate-800;
+}
+
+/* Custom Component Classes */
+.btn-primary {
+  @apply inline-flex items-center justify-center px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors duration-200;
+}
+
+.label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}

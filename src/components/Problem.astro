@@ -1,0 +1,100 @@
+---
+// Import the ContactButton component for consistency
+import ContactButton from './ContactButton.astro';
+
+// Define the value propositions
+const valueProps = [
+  {
+    title: "We Serve the Hinterland",
+    description: "We don't just stop at the coast. We have a fully operational branch in Mabaruma, connecting Region 1 to the global market.",
+    icon: "map"
+  },
+  {
+    title: "Air Freight Speed",
+    description: "We specialize in air cargo. Get your items in days, not weeks. No more waiting for slow sea barrels.",
+    icon: "lightning"
+  },
+  {
+    title: "Customs Done For You",
+    description: "We navigate the complex paperwork and GRA requirements so you don't have to worry about clearance.",
+    icon: "shield"
+  },
+  {
+    title: "Real Support",
+    description: "Have a question? You can walk into our office or WhatsApp a real person. No bots, just local expertise.",
+    icon: "support"
+  }
+];
+
+const {
+  title = "Why Guyanese Shoppers Choose Mendonca",
+} = Astro.props;
+---
+
+<section id="problems" class="py-24 bg-white dark:bg-slate-900 relative overflow-hidden transition-colors duration-300">
+  <!-- Glowing Orbs -->
+  <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 dark:bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+  <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-secondary/10 dark:bg-secondary/5 rounded-full blur-[120px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+  
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <!-- Section Header -->
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 backdrop-blur-md text-secondary dark:text-secondary-light text-sm font-bold tracking-wider uppercase mb-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        Our Advantage
+      </div>
+      <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">{title}</h2>
+      <div class="w-20 h-1.5 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+    </div>
+    
+    <!-- Premium Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+      {valueProps.map((prop, index) => {
+        // Dynamic classes based on index to make bento grid varied
+        let spanClass = "col-span-1";
+        if (index === 0) spanClass = "col-span-1 md:row-span-2";
+        if (index === 3) spanClass = "col-span-1 md:col-span-2";
+
+        return (
+        <div class={`bg-slate-50/80 dark:bg-slate-800/40 backdrop-blur-xl rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 transition-all duration-500 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(255,255,255,0.05)] hover:-translate-y-1 group overflow-hidden relative ${spanClass}`}>
+          
+          <!-- Subtle hover gradient background -->
+          <div class="absolute inset-0 bg-gradient-to-br from-primary/0 to-transparent group-hover:from-primary/5 transition-colors duration-500"></div>
+
+          <div class={`flex ${index === 0 ? 'flex-col' : 'items-start gap-6'} ${index === 3 ? 'md:flex-row md:items-center' : ''} relative z-10 h-full`}>
+            <!-- Icon floating block -->
+            <div class={`p-5 bg-white dark:bg-slate-900 rounded-2xl text-secondary shadow-lg border border-slate-100 dark:border-slate-800 transition-transform duration-500 group-hover:scale-110 flex-shrink-0 ${index === 0 ? 'mb-8 inline-flex' : ''}`}>
+              {prop.icon === "map" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A2 2 0 013 15.488V5.512a2 2 0 011.553-1.954L9 2l6 3 5.447-2.724A2 2 0 0121 4.112v9.976a2 2 0 01-1.553 1.954L15 22l-6-3z" />
+                </svg>
+              )}
+              {prop.icon === "lightning" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              )}
+              {prop.icon === "shield" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              )}
+              {prop.icon === "support" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              )}
+            </div>
+            
+            <!-- Content -->
+            <div class={`${index === 3 ? 'md:flex-1' : ''}`}>
+              <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">{prop.title}</h3>
+              <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{prop.description}</p>
+            </div>
+          </div>
+        </div>
+        )
+      })}
+    </div>
+    
+  </div>
+</section>

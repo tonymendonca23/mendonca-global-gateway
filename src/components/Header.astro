@@ -1,0 +1,176 @@
+---
+import ContactButton from "./ContactButton.astro";
+
+interface Props {
+  isHome?: boolean;
+}
+
+const { isHome = false } = Astro.props;
+
+const navItems = [
+  { label: "Home", href: isHome ? "#home" : "/" },
+  { label: "About Us", href: "/aboutUs" },
+  { label: "Pricing", href: isHome ? "#pricing" : "/#pricing" },
+  { label: "Features", href: isHome ? "#services" : "/#services" },
+  { label: "FAQ", href: isHome ? "#faq" : "/#faq" },
+];
+---
+
+<header
+  class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800"
+>
+  <div class="container mx-auto px-4 md:px-6">
+    <div class="flex items-center justify-between h-20 md:h-24">
+      <!-- Logo -->
+      <div class="flex-shrink-0">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="bg-primary/10 dark:bg-primary/20 p-2 rounded-xl">
+            <img
+              src="/logo.svg"
+              alt="Mendonca Global Gateway Logo"
+              class="h-8 md:h-10 w-auto transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
+          <span
+            class="text-custom-bg dark:text-white font-bold text-lg md:text-xl hidden sm:block tracking-tight"
+            >Mendonca Global Gateway</span
+          >
+        </a>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden md:flex items-center space-x-8">
+        {
+          navItems.map((item) => (
+            <a
+              href={item.href}
+              class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary font-medium transition-colors duration-200 text-sm tracking-wide uppercase"
+            >
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      <!-- CTA & Theme Toggle & Mobile Menu -->
+      <div class="flex items-center gap-4">
+        <!-- Theme Toggle -->
+        <button
+          id="theme-toggle"
+          class="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-300/80 bg-white text-slate-700 shadow-[0_0_0_1px_rgba(148,163,184,0.35)] hover:border-primary hover:text-primary dark:bg-slate-900 dark:text-slate-100 dark:border-slate-600/80 dark:shadow-[0_0_0_1px_rgba(15,23,42,0.85)] transition-all duration-300"
+          aria-label="Toggle dark mode"
+        >
+          <svg
+            id="theme-toggle-dark-icon"
+            class="hidden w-5 h-5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
+            ><path
+              d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+            ></path></svg
+          >
+          <svg
+            id="theme-toggle-light-icon"
+            class="hidden w-5 h-5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
+            ><path
+              d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+              fill-rule="evenodd"
+              clip-rule="evenodd"></path></svg
+          >
+        </button>
+
+        <div class="hidden md:flex items-center gap-3">
+          <a
+            href="/auth/login"
+            class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary font-medium transition-colors duration-200 text-sm tracking-wide"
+          >
+            Login
+          </a>
+          <ContactButton
+            text="Sign Up"
+            href="/auth/register"
+            className="bg-primary text-white px-6 py-2.5 rounded-full hover:bg-primary/90 transition-all duration-300 font-medium shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5"
+          />
+        </div>
+
+        <script>
+          document.addEventListener("DOMContentLoaded", () => {
+            // Theme Toggle Logic
+            const themeToggleDarkIcon = document.getElementById(
+              "theme-toggle-dark-icon",
+            );
+            const themeToggleLightIcon = document.getElementById(
+              "theme-toggle-light-icon",
+            );
+            const themeToggleBtn = document.getElementById("theme-toggle");
+
+            if (themeToggleBtn) {
+              // Set initial icon state based on current document theme
+              const isDark =
+                document.documentElement.classList.contains("dark");
+              if (isDark) {
+                // Dark mode active -> show sun icon
+                themeToggleLightIcon?.classList.remove("hidden");
+                themeToggleDarkIcon?.classList.add("hidden");
+              } else {
+                // Light mode active -> show moon icon
+                themeToggleDarkIcon?.classList.remove("hidden");
+                themeToggleLightIcon?.classList.add("hidden");
+              }
+
+              themeToggleBtn.addEventListener("click", () => {
+                const currentlyDark =
+                  document.documentElement.classList.contains("dark");
+                const nextIsDark = !currentlyDark;
+
+                if (nextIsDark) {
+                  document.documentElement.classList.add("dark");
+                  localStorage.setItem("theme", "dark");
+                  themeToggleLightIcon?.classList.remove("hidden");
+                  themeToggleDarkIcon?.classList.add("hidden");
+                } else {
+                  document.documentElement.classList.remove("dark");
+                  localStorage.setItem("theme", "light");
+                  themeToggleDarkIcon?.classList.remove("hidden");
+                  themeToggleLightIcon?.classList.add("hidden");
+                }
+              });
+            }
+
+            // Mobile Menu Logic
+            const mobileMenuButton =
+              document.getElementById("mobile-menu-button");
+            const mobileMenu = document.getElementById("mobile-menu");
+
+            if (mobileMenuButton && mobileMenu) {
+              mobileMenuButton.addEventListener("click", () => {
+                mobileMenu.classList.toggle("hidden");
+                const isOpen = !mobileMenu.classList.contains("hidden");
+                mobileMenuButton.setAttribute(
+                  "aria-expanded",
+                  isOpen ? "true" : "false",
+                );
+                const icon = mobileMenuButton.querySelector("svg");
+                if (mobileMenu.classList.contains("hidden")) {
+                  // Menu icon
+                  if (icon)
+                    icon.innerHTML =
+                      "<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 6h16M4 12h16M4 18h16'></path>";
+                } else {
+                  // Close icon
+                  if (icon)
+                    icon.innerHTML =
+                      "<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 18L18 6M6 6l12 12'></path>";
+                }
+              });
+            }
+          });
+        </script>
+      </div>
+    </div>
+  </div>
+</header>

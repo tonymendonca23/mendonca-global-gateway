@@ -1,0 +1,46 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SignUpForm from "../../components/SignUpForm.astro";
+---
+
+<BaseLayout title="Create Your Account">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-primary text-white">
+            <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between">
+                    <a
+                        href="/"
+                        class="flex items-center gap-3 relative z-10 hover:opacity-90 transition"
+                    >
+                        <div
+                            class="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1.5 shadow-sm"
+                        >
+                            <img
+                                src="/logo.svg"
+                                alt="Mendonca Global Gateway Logo"
+                                class="w-full h-full object-contain"
+                            />
+                        </div>
+                        <span
+                            class="text-xl font-heading font-bold tracking-tight"
+                        >
+                            Mendonca Global Gateway
+                        </span>
+                    </a>
+                    <a
+                        href="/auth/login"
+                        class="text-sm text-white/80 hover:text-white transition"
+                    >
+                        Already have an account? Sign in
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="flex-1 bg-gray-50">
+            <SignUpForm />
+        </main>
+    </div>
+</BaseLayout>

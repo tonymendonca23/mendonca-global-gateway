@@ -1,0 +1,468 @@
+---
+// Sign Up / Onboarding Form Component
+---
+
+<section
+  id="signup"
+  class="py-24 bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden transition-colors duration-300"
+>
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <!-- Section Header -->
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <h2
+        class="text-3xl md:text-4xl lg:text-5xl font-bold text-custom-bg dark:text-white mb-4 tracking-tight"
+      >
+        Get Your Free US Address
+      </h2>
+      <p class="text-xl text-gray-500 dark:text-gray-400 font-light">
+        Sign up in minutes and start shopping from any US store. We'll handle
+        the shipping to Guyana!
+      </p>
+    </div>
+
+    <div class="max-w-2xl mx-auto">
+      <!-- Sign Up Form -->
+      <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 lg:p-10 border border-gray-100 dark:border-slate-700"
+      >
+        <form id="signupForm" class="space-y-6">
+          <!-- Name Field -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                for="firstName"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >First Name *</label
+              >
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                required
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label
+                for="lastName"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >Last Name *</label
+              >
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                required
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300"
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
+          <!-- Email Field -->
+          <div>
+            <label
+              for="email"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Email Address *</label
+            >
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300"
+              placeholder="your.email@example.com"
+            />
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            <label
+              for="password"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Password *</label
+            >
+            <div class="relative">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                minlength="8"
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300 pr-12"
+                placeholder="Min. 8 characters"
+              />
+              <button
+                type="button"
+                id="toggle-password"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                aria-label="Show password"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Confirm Password Field -->
+          <div>
+            <label
+              for="confirmPassword"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Confirm Password *</label
+            >
+            <div class="relative">
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300 pr-12"
+                placeholder="Confirm your password"
+              />
+              <button
+                type="button"
+                id="toggle-confirm-password"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                aria-label="Show confirm password"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Phone Field -->
+          <div>
+            <label
+              for="phone"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Phone Number (Guyana) *</label
+            >
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              required
+              class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300"
+              placeholder="+592 000-0000"
+            />
+          </div>
+
+          <!-- Address Field -->
+          <div>
+            <label
+              for="address"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Delivery Address in Guyana *</label
+            >
+            <textarea
+              id="address"
+              name="address"
+              required
+              rows="3"
+              class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300 resize-none"
+              placeholder="Enter your full delivery address in Guyana"
+            ></textarea>
+          </div>
+
+          <!-- City Selection -->
+          <div>
+            <label
+              for="city"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Preferred Pickup Location *</label
+            >
+            <select
+              id="city"
+              name="city"
+              required
+              class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300"
+            >
+              <option value="">Select your city</option>
+              <option value="Georgetown">Georgetown</option>
+              <option value="Mabaruma">Mabaruma</option>
+            </select>
+          </div>
+
+          <!-- Error Message -->
+          <div
+            id="errorMessage"
+            class="hidden p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm"
+          >
+          </div>
+
+          <!-- Success Message -->
+          <div
+            id="successMessage"
+            class="hidden p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400 text-sm text-center"
+          >
+            <p class="font-semibold mb-2">Account Created Successfully!</p>
+            <p>Your US shipping address will be sent to your email shortly.</p>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            id="submitBtn"
+            class="w-full bg-primary text-white px-6 py-4 rounded-xl hover:bg-primary/90 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            Create My Account
+          </button>
+
+          <!-- Login Link -->
+          <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+            Already have an account?
+            <a
+              href="/auth/login"
+              class="text-primary hover:text-primary/80 font-medium transition-colors"
+            >
+              Sign in here
+            </a>
+          </p>
+        </form>
+      </div>
+
+      <!-- Benefits -->
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div
+          class="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700"
+        >
+          <div
+            class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >Free US Address</span
+          >
+        </div>
+        <div
+          class="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700"
+        >
+          <div
+            class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >Fast Shipping</span
+          >
+        </div>
+        <div
+          class="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700"
+        >
+          <div
+            class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+              ></path>
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >Customs Handled</span
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  function setupPasswordToggle(toggleId: string, inputId: string) {
+    const toggle = document.getElementById(toggleId);
+    const input = document.getElementById(inputId) as HTMLInputElement;
+
+    if (toggle && input) {
+      toggle.addEventListener("click", () => {
+        const type =
+          input.getAttribute("type") === "password" ? "text" : "password";
+        input.setAttribute("type", type);
+
+        if (type === "text") {
+          toggle.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          `;
+        } else {
+          toggle.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          `;
+        }
+      });
+    }
+  }
+
+  setupPasswordToggle("toggle-password", "password");
+  setupPasswordToggle("toggle-confirm-password", "confirmPassword");
+
+  const form = document.getElementById("signupForm") as HTMLFormElement;
+  const errorMessage = document.getElementById("errorMessage");
+  const successMessage = document.getElementById("successMessage");
+  const submitBtn = document.getElementById("submitBtn");
+
+  function showError(message: string) {
+    if (errorMessage) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove("hidden");
+    }
+    if (successMessage) {
+      successMessage.classList.add("hidden");
+    }
+  }
+
+  function hideError() {
+    if (errorMessage) {
+      errorMessage.classList.add("hidden");
+    }
+  }
+
+  function showSuccess() {
+    if (successMessage) {
+      successMessage.classList.remove("hidden");
+    }
+    if (errorMessage) {
+      errorMessage.classList.add("hidden");
+    }
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const formData = new FormData(form);
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      showError("Passwords do not match.");
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      showError("Password must be at least 8 characters.");
+      return;
+    }
+
+    // Disable button
+    if (submitBtn) {
+      submitBtn.setAttribute("disabled", "true");
+      submitBtn.textContent = "Creating Account...";
+    }
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.get("firstName"),
+          lastName: formData.get("lastName"),
+          email: formData.get("email"),
+          password: password,
+          phone: formData.get("phone"),
+          address: formData.get("address"),
+          city: formData.get("city"),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showSuccess();
+        form.reset();
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 2000);
+      } else {
+        showError(data.error || "Failed to create account. Please try again.");
+        if (submitBtn) {
+          submitBtn.removeAttribute("disabled");
+          submitBtn.textContent = "Create My Account";
+        }
+      }
+    } catch (error) {
+      ;
+      showError("An error occurred. Please try again.");
+      if (submitBtn) {
+        submitBtn.removeAttribute("disabled");
+        submitBtn.textContent = "Create My Account";
+      }
+    }
+  });
+</script>

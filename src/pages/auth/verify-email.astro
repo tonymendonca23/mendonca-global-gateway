@@ -1,0 +1,85 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const token = Astro.url.searchParams.get('token');
+const error = Astro.url.searchParams.get('error');
+
+// If there's a token, the page will verify it client-side
+// Or we could verify server-side here
+---
+
+<Layout title="Verify Email - Mendonca Global Gateway">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div class="flex flex-col items-center">
+        <a href="/" class="mb-4">
+          <div class="w-12 h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center p-2">
+            <img src="/logo.svg" alt="Mendonca Global Gateway Logo" class="w-full h-full object-contain" />
+          </div>
+        </a>
+        <h2 class="mt-2 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+          Email Verification
+        </h2>
+      </div>
+      
+      <div id="verification-status" class="rounded-md bg-blue-50 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-blue-700">
+              Verifying your email address...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div class="rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-700">
+                {error === 'no_verification_token' && 'No verification token provided.'}
+                {error === 'invalid_or_expired_verification' && 'This verification link is invalid or has expired. Please request a new one.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {token && (
+    <script>
+      // Verify the token client-side
+      const token = new URLSearchParams(window.location.search).get('token');
+      
+      fetch(`/api/auth/verify-email?token=${token}`)
+        .then(response => {
+          if (response.redirected) {
+            window.location.href = response.url;
+          } else {
+            return response.json();
+          }
+        })
+        .then(data => {
+          if (data && !data.success) {
+            window.location.href = `/auth/login?error=${data.error || 'verification_failed'}`;
+          }
+        })
+        .catch(error => {
+          ;
+          window.location.href = '/auth/login?error=verification_failed';
+        });
+    </script>
+  )}
+</Layout>

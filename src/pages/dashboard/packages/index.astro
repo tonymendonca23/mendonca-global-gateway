@@ -1,0 +1,547 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import db from "../../../lib/db";
+import { PACKAGE_STATUS_LABELS, formatDate } from "../../../lib/utils";
+
+const user = Astro.locals.user!;
+
+const url = new URL(Astro.request.url);
+const statusFilter = url.searchParams.get("status") || "";
+const searchQuery = url.searchParams.get("search") || "";
+
+let sql = `
+  SELECT 
+    p.id, p.mgg_tracking_number, p.original_tracking_number, p.store_name,
+    p.description, p.weight_lbs, p.status, p.status_updated_at, p.branch,
+    u.name as customer_name, u.customer_code
+  FROM packages p
+  JOIN users u ON p.customer_id = u.id
+  WHERE p.customer_id = ?
+`;
+
+const args: any[] = [user.id];
+
+if (statusFilter) {
+    sql += " AND p.status = ?";
+    args.push(statusFilter);
+}
+
+if (searchQuery) {
+    sql +=
+        " AND (p.mgg_tracking_number LIKE ? OR p.original_tracking_number LIKE ? OR p.description LIKE ? OR u.name LIKE ? OR p.store_name LIKE ?)";
+    const searchTerm = `%${searchQuery}%`;
+    args.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+}
+
+sql += " ORDER BY p.status_updated_at DESC";
+
+const packagesResult = await db.execute({ sql, args });
+const packages = packagesResult.rows;
+
+const statuses = Object.keys(PACKAGE_STATUS_LABELS);
+---
+
+<BaseLayout title="My Packages">
+    <div class="min-h-screen">
+        <div
+            id="customer-sidebar-backdrop"
+            class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"
+        >
+        </div>
+
+        <!-- Sidebar -->
+        <aside
+            id="customer-sidebar"
+            class="w-64 bg-primary text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full transition-transform duration-200 md:translate-x-0 !fixed"
+        >
+            <div class="p-4">
+                <a href="/" class="flex items-center gap-3 mb-8">
+                    <div
+                        class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm"
+                    >
+                        <img
+                            src="/logo.svg"
+                            alt="Mendonca Global Gateway Logo"
+                            class="h-8 w-auto"
+                        />
+                    </div>
+                    <span class="text-lg font-heading font-bold tracking-tight"
+                        >MGG</span
+                    >
+                </a>
+
+                <nav class="space-y-1">
+                    <a
+                        href="/dashboard"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span
+                            class="inline-flex items-center justify-center h-5 w-5"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                ><rect x="3" y="4" width="4" height="16" rx="1"
+                                ></rect><rect
+                                    x="10"
+                                    y="9"
+                                    width="4"
+                                    height="11"
+                                    rx="1"></rect><rect
+                                    x="17"
+                                    y="13"
+                                    width="4"
+                                    height="7"
+                                    rx="1"></rect></svg
+                            >
+                        </span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a
+                        href="/dashboard/packages"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white font-medium transition"
+                    >
+                        <span
+                            class="inline-flex items-center justify-center h-5 w-5"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                ><path d="M3 7l9-4 9 4"></path><path
+                                    d="M4 8h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"
+                                ></path><path d="M12 3v6"></path></svg
+                            >
+                        </span>
+                        <span>My Packages</span>
+                    </a>
+                    <a
+                        href="/dashboard/invoices"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span
+                            class="inline-flex items-center justify-center h-5 w-5"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                ><path
+                                    d="M7 3h10l2 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"
+                                ></path><path d="M9 12h6"></path><path
+                                    d="M9 16h4"></path></svg
+                            >
+                        </span>
+                        <span>Invoices</span>
+                    </a>
+                    <a
+                        href="/dashboard/profile"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span
+                            class="inline-flex items-center justify-center h-5 w-5"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                ><circle cx="12" cy="8" r="3"></circle><path
+                                    d="M6 19a6 6 0 0 1 12 0"></path></svg
+                            >
+                        </span>
+                        <span>Profile</span>
+                    </a>
+                    <a
+                        href="/dashboard/comments"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span
+                            class="inline-flex items-center justify-center h-5 w-5"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                ><path
+                                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                                ></path></svg
+                            >
+                        </span>
+                        <span>Comments</span>
+                    </a>
+                </nav>
+
+                <hr class="border-white/20 my-6" />
+
+                <a
+                    href="/api/auth/logout"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-white/70"
+                >
+                    <span
+                        class="inline-flex items-center justify-center h-5 w-5"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            ><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"
+                            ></path><path d="M4 4h7v16H4z"></path></svg
+                        >
+                    </span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main
+            class="bg-gray-50 md:ml-64 min-h-screen transition-all duration-300"
+        >
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <button
+                        id="customer-sidebar-toggle"
+                        type="button"
+                        class="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 md:hidden"
+                        aria-label="Toggle navigation"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"></path></svg
+                        >
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            My Packages
+                        </h1>
+                        <p class="text-sm text-gray-500">
+                            View and track your package history
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-4 md:p-6 space-y-6">
+                <!-- Filters & Controls -->
+                <div
+                    class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+                >
+                    <form
+                        method="GET"
+                        class="flex flex-col md:flex-row gap-4 items-end"
+                    >
+                        <div
+                            class="flex-1 w-full flex flex-col md:flex-row gap-4"
+                        >
+                            <div class="w-full md:w-1/3">
+                                <label
+                                    for="search"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                    >Search</label
+                                >
+                                <div class="relative">
+                                    <div
+                                        class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                                    >
+                                        <svg
+                                            class="h-5 w-5 text-gray-400"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="search"
+                                        id="search"
+                                        value={searchQuery}
+                                        class="pl-10 input w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary"
+                                        placeholder="Search tracking, description..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="w-full md:w-1/4">
+                                <label
+                                    for="status"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                    >Status Filter</label
+                                >
+                                <select
+                                    name="status"
+                                    id="status"
+                                    class="input w-full rounded-lg border-gray-300 focus:border-primary focus:ring-primary"
+                                >
+                                    <option value="">All Statuses</option>
+                                    {
+                                        statuses.map((status) => (
+                                            <option
+                                                value={status}
+                                                selected={
+                                                    statusFilter === status
+                                                }
+                                            >
+                                                {PACKAGE_STATUS_LABELS[
+                                                    status as keyof typeof PACKAGE_STATUS_LABELS
+                                                ]?.label || status}
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="w-full md:w-auto flex items-end">
+                                <button
+                                    type="submit"
+                                    class="w-full btn-primary py-2.5 px-6 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                                >
+                                    Apply Filters
+                                </button>
+                            </div>
+
+                            {
+                                (searchQuery || statusFilter) && (
+                                    <div class="w-full md:w-auto flex items-end">
+                                        <a
+                                            href="/dashboard/packages"
+                                            class="w-full btn-secondary py-2.5 px-6 rounded-lg text-center"
+                                        >
+                                            Clear
+                                        </a>
+                                    </div>
+                                )
+                            }
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Table Container -->
+                <div
+                    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
+                    <div class="overflow-x-auto">
+                        <table
+                            class="w-full text-left border-collapse min-w-max text-sm"
+                        >
+                            <thead>
+                                <tr
+                                    class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider"
+                                >
+                                    <th
+                                        class="p-4 font-semibold w-16 text-center"
+                                        >Sn.</th
+                                    >
+                                    <th class="p-4 font-semibold">Status</th>
+                                    <th class="p-4 font-semibold">Location</th>
+                                    <th class="p-4 font-semibold">Shipper</th>
+                                    <th class="p-4 font-semibold"
+                                        >Customer Name</th
+                                    >
+                                    <th class="p-4 font-semibold"
+                                        >Customer ID</th
+                                    >
+                                    <th class="p-4 font-semibold">Weight</th>
+                                    <th class="p-4 font-semibold"
+                                        >Commodities</th
+                                    >
+                                </tr>
+                            </thead>
+                            <tbody
+                                class="divide-y divide-gray-100 text-gray-800"
+                            >
+                                {
+                                    packages.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colspan="8"
+                                                class="p-8 text-center text-gray-500"
+                                            >
+                                                <div class="flex flex-col items-center justify-center">
+                                                    <svg
+                                                        class="w-12 h-12 text-gray-300 mb-3"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                                                        />
+                                                    </svg>
+                                                    <p class="text-base font-medium">
+                                                        No packages found
+                                                    </p>
+                                                    <p class="text-sm">
+                                                        Adjust your filters to
+                                                        see more results
+                                                    </p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        packages.map(
+                                            (pkg: any, index: number) => {
+                                                const statusInfo =
+                                                    PACKAGE_STATUS_LABELS[
+                                                        pkg.status as keyof typeof PACKAGE_STATUS_LABELS
+                                                    ];
+                                                return (
+                                                    <tr class="hover:bg-gray-50/80 transition-colors group">
+                                                        <td class="p-4 text-center font-medium text-gray-500">
+                                                            {index + 1}
+                                                        </td>
+                                                        <td class="p-4">
+                                                            <span
+                                                                class={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+                                                        ${
+                                                            pkg.status ===
+                                                            "ready"
+                                                                ? "bg-green-100 text-green-700 border border-green-200"
+                                                                : pkg.status ===
+                                                                    "picked_up"
+                                                                  ? "bg-gray-100 text-gray-700 border border-gray-200"
+                                                                  : pkg.status ===
+                                                                      "in_transit"
+                                                                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                                                                    : pkg.status ===
+                                                                        "customs"
+                                                                      ? "bg-purple-100 text-purple-700 border border-purple-200"
+                                                                      : pkg.status ===
+                                                                          "at_warehouse"
+                                                                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                                                        : "bg-orange-100 text-orange-800 border border-orange-200"
+                                                        }`}
+                                                            >
+                                                                {statusInfo?.label ||
+                                                                    pkg.status}
+                                                            </span>
+                                                        </td>
+                                                        <td class="p-4">
+                                                            <div class="flex items-center gap-1.5 text-gray-600">
+                                                                <svg
+                                                                    class="w-4 h-4 text-gray-400"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    stroke-width="2"
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
+                                                                >
+                                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                                                    <circle
+                                                                        cx="12"
+                                                                        cy="10"
+                                                                        r="3"
+                                                                    />
+                                                                </svg>
+                                                                <span class="capitalize">
+                                                                    {pkg.branch ||
+                                                                        "Georgetown"}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="p-4 font-medium text-gray-900">
+                                                            {pkg.store_name ||
+                                                                "-"}
+                                                        </td>
+                                                        <td class="p-4 text-gray-700">
+                                                            {pkg.customer_name ||
+                                                                "-"}
+                                                        </td>
+                                                        <td class="p-4 font-mono text-sm text-primary">
+                                                            {pkg.customer_code ||
+                                                                "-"}
+                                                        </td>
+                                                        <td class="p-4 text-gray-600">
+                                                            {pkg.weight_lbs
+                                                                ? `${pkg.weight_lbs} lbs`
+                                                                : "-"}
+                                                        </td>
+                                                        <td
+                                                            class="p-4 text-gray-600 max-w-[200px] truncate"
+                                                            title={
+                                                                pkg.description
+                                                            }
+                                                        >
+                                                            {pkg.description ||
+                                                                "-"}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            },
+                                        )
+                                    )
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</BaseLayout>
+
+<script>
+    const sidebar = document.getElementById("customer-sidebar");
+    const backdrop = document.getElementById("customer-sidebar-backdrop");
+    const toggleButtons = document.querySelectorAll("#customer-sidebar-toggle");
+
+    function toggleSidebar() {
+        const isHidden = sidebar?.classList.contains("-translate-x-full");
+
+        if (isHidden) {
+            sidebar?.classList.remove("-translate-x-full");
+            backdrop?.classList.remove("hidden");
+        } else {
+            sidebar?.classList.add("-translate-x-full");
+            backdrop?.classList.add("hidden");
+        }
+    }
+
+    toggleButtons.forEach((btn) =>
+        btn.addEventListener("click", toggleSidebar),
+    );
+
+    if (backdrop) {
+        backdrop.addEventListener("click", toggleSidebar);
+    }
+</script>

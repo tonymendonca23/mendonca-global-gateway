@@ -1,0 +1,221 @@
+---
+import ContactButton from "./ContactButton.astro";
+
+// Define headline and subheadline
+const headline = "Shop in the USA. Receive in Guyana.";
+const subheadline =
+  "Stop waiting for travelers or worrying about customs. We provide you with a personal US Shipping Address, fly your items to Georgetown or Mabaruma, and handle all the clearing for you.";
+---
+
+<section
+  id="home"
+  class="relative min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300"
+>
+  <!-- Hero Content -->
+  <div
+    class="flex-grow pt-24 md:pt-32 relative overflow-hidden flex items-center"
+  >
+    <!-- Decorative Blobs -->
+    <div
+      class="absolute top-10 right-10 w-[600px] h-[600px] bg-primary/20 dark:bg-primary/10 rounded-full blur-[100px] pointer-events-none"
+    >
+    </div>
+    <div
+      class="absolute bottom-10 left-10 w-[500px] h-[500px] bg-secondary/20 dark:bg-secondary/10 rounded-full blur-[100px] pointer-events-none"
+    >
+    </div>
+
+    <div class="container mx-auto px-4 md:px-6 relative z-10">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <!-- Text Content -->
+        <div class="text-center lg:text-left space-y-8">
+          <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-md text-primary dark:text-primary-light text-sm font-semibold border border-white/20 dark:border-slate-800/50 shadow-sm"
+          >
+            <span class="relative flex h-2 w-2">
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"
+              ></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"
+              ></span>
+            </span>
+            #1 Logistics Partner in Guyana
+          </div>
+
+          <h1
+            class="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] text-slate-900 dark:text-white tracking-tight"
+          >
+            {headline.split(". ")[0]}.<br />
+            <span
+              class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
+            >
+              {headline.split(". ")[1]}
+            </span>
+          </h1>
+
+          <p
+            class="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+          >
+            {subheadline}
+          </p>
+
+          <div
+            class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4"
+          >
+            <ContactButton
+              text="GET MY FREE US ADDRESS"
+              href="/auth/register"
+              className="bg-primary text-white px-8 py-4 rounded-2xl hover:bg-primary-600 transition-all duration-300 font-bold shadow-[0_0_40px_-10px_rgba(26,54,93,0.5)] transform hover:-translate-y-1 text-center"
+            />
+            <ContactButton
+              text="See Our Rates"
+              href="#pricing"
+              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-900 dark:text-white border border-white/20 dark:border-slate-700 px-8 py-4 rounded-2xl hover:bg-white dark:hover:bg-slate-800 transition-all duration-300 font-bold text-center shadow-sm"
+            />
+          </div>
+
+          <div
+            class="flex items-center justify-center lg:justify-start gap-8 pt-8"
+          >
+            <div class="flex -space-x-4">
+              <img
+                class="w-12 h-12 rounded-full border-4 border-slate-50 dark:border-slate-950"
+                src="https://i.pravatar.cc/100?img=1"
+                alt="User"
+              />
+              <img
+                class="w-12 h-12 rounded-full border-4 border-slate-50 dark:border-slate-950"
+                src="https://i.pravatar.cc/100?img=2"
+                alt="User"
+              />
+              <img
+                class="w-12 h-12 rounded-full border-4 border-slate-50 dark:border-slate-950"
+                src="https://i.pravatar.cc/100?img=3"
+                alt="User"
+              />
+              <div
+                class="w-12 h-12 rounded-full border-4 border-slate-50 dark:border-slate-950 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300"
+              >
+                50+
+              </div>
+            </div>
+            <div>
+              <div class="flex text-yellow-500 text-lg">★★★★★</div>
+              <div
+                class="text-sm text-slate-600 dark:text-slate-400 font-medium"
+              >
+                Trusted by clients
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Graphics (Glassy Floating Cards) -->
+        <div
+          class="relative w-full aspect-square md:aspect-[4/3] lg:aspect-square flex items-center justify-center"
+        >
+          <!-- Central Main Card (Image & Copy) -->
+          <div
+            class="absolute z-20 w-[85%] h-[70%] rounded-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden transform transition-transform hover:-translate-y-2 duration-500 cursor-pointer group"
+          >
+            <!-- Background Image -->
+            <img
+              src="/hero-image.jpeg"
+              alt="Mendonca Global Air Cargo Logistics"
+              class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+
+            <!-- Overlay Gradient -->
+            <div
+              class="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent"
+            >
+            </div>
+
+            <!-- Content -->
+            <div class="relative h-full p-6 flex flex-col justify-between z-10">
+              <div class="flex justify-end">
+                <span
+                  class="px-4 py-1.5 bg-secondary/90 text-white rounded-full text-xs font-bold backdrop-blur-md shadow-lg border border-white/20 uppercase tracking-wide"
+                >
+                  Global Fleet
+                </span>
+              </div>
+
+              <div
+                class="mt-auto translate-y-2 group-hover:translate-y-0 transition-transform duration-500"
+              >
+                <div
+                  class="bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-2xl shadow-xl"
+                >
+                  <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xl font-bold text-white tracking-tight">
+                      Miami ✈ Guyana
+                    </h3>
+                    <svg
+                      class="w-5 h-5 text-secondary animate-pulse"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg
+                    >
+                  </div>
+                  <p class="text-slate-200 text-sm mb-4 font-medium opacity-90">
+                    Direct air cargo to Georgetown & Mabaruma
+                  </p>
+
+                  <div
+                    class="w-full bg-slate-900/60 rounded-full h-1.5 overflow-hidden"
+                  >
+                    <div
+                      class="bg-gradient-to-r from-primary-light to-secondary h-1.5 rounded-full w-[85%] shadow-[0_0_15px_rgba(237,137,54,0.6)] relative"
+                    >
+                      <div
+                        class="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full animate-ping"
+                      >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-15px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  @keyframes float-delayed {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float-delayed 8s ease-in-out infinite 2s;
+  }
+</style>

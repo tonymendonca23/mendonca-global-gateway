@@ -1,0 +1,284 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../../components/admin/DashboardHeader.astro";
+import db from "../../../lib/db";
+import {
+  formatDate,
+  formatGYD,
+  PACKAGE_STATUS_LABELS,
+} from "../../../lib/utils";
+
+const staff = Astro.locals.staff!;
+const customerId = Astro.params.id;
+
+if (!customerId) {
+  return Astro.redirect("/admin/customers");
+}
+
+// Get customer details
+const customerResult = await db.execute({
+  sql: `
+    SELECT 
+      u.*,
+      (SELECT COUNT(*) FROM packages WHERE customer_id = u.id) as total_packages,
+      (SELECT COUNT(*) FROM invoices WHERE customer_id = u.id) as total_invoices,
+      (SELECT COALESCE(SUM(total_gyd), 0) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as total_owed
+    FROM users u
+    WHERE u.id = ?
+  `,
+  args: [customerId],
+});
+const customer = customerResult.rows[0] as any;
+
+if (!customer) {
+  return Astro.redirect("/admin/customers");
+}
+
+// Get customer packages
+const packagesResult = await db.execute({
+  sql: `
+    SELECT * FROM packages 
+    WHERE customer_id = ?
+    ORDER BY status_updated_at DESC
+    LIMIT 20
+  `,
+  args: [customerId],
+});
+const packages = packagesResult.rows;
+
+// Get customer invoices
+const invoicesResult = await db.execute({
+  sql: `
+    SELECT * FROM invoices 
+    WHERE customer_id = ?
+    ORDER BY issued_at DESC
+    LIMIT 10
+  `,
+  args: [customerId],
+});
+const invoices = invoicesResult.rows;
+---
+
+<BaseLayout title="Customer Details">
+  <div class="min-h-screen">
+    <AdminSidebar />
+
+    <!-- Main Content -->
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader
+        title="Customer Details"
+        subtitle="View customer information and history"
+      >
+        <div class="flex gap-3">
+          <a
+            href={`/admin/invoices/new?customer=${customerId}`}
+            class="btn-primary"
+          >
+            + Create Invoice
+          </a>
+          <a href="/admin/customers" class="btn-secondary">
+            ← Back to Customers
+          </a>
+        </div>
+      </DashboardHeader>
+
+      <!-- Content -->
+      <div class="p-8">
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Customer Info -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <div class="text-center mb-6">
+                <div
+                  class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                  <span class="text-3xl">👤</span>
+                </div>
+                <h2 class="text-xl font-bold text-gray-900">
+                  {customer.name || "No name"}
+                </h2>
+                <p class="text-gray-500">{customer.email}</p>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <div class="text-sm text-gray-500">Phone</div>
+                  <div class="font-medium">{customer.phone || "-"}</div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-500">Address</div>
+                  <div class="font-medium">{customer.address || "-"}</div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-500">Customer ID</div>
+                  <div class="font-mono font-medium">
+                    {customer.customer_code || "Not set"}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-500">Member Since</div>
+                  <div class="font-medium">
+                    {formatDate(customer.created_at)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mt-6">
+              <h3
+                class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4"
+              >
+                Summary
+              </h3>
+              <div class="space-y-4">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Total Packages</span>
+                  <span class="font-bold text-primary"
+                    >{customer.total_packages}</span
+                  >
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Total Invoices</span>
+                  <span class="font-bold text-gray-900"
+                    >{customer.total_invoices}</span
+                  >
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Amount Owed</span>
+                  <span class="font-bold text-red-600"
+                    >{formatGYD(customer.total_owed)}</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Packages & Invoices -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Recent Packages -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                  Recent Packages
+                </h3>
+                <a
+                  href={`/admin/packages?customer=${customerId}`}
+                  class="text-sm text-primary hover:underline"
+                >
+                  View all →
+                </a>
+              </div>
+
+              {
+                packages.length === 0 ? (
+                  <p class="text-gray-500 text-center py-8">No packages yet</p>
+                ) : (
+                  <div class="space-y-3">
+                    {packages.map((pkg: any) => {
+                      const statusInfo =
+                        PACKAGE_STATUS_LABELS[
+                          pkg.status as keyof typeof PACKAGE_STATUS_LABELS
+                        ];
+                      return (
+                        <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                          <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white">
+                            <svg
+                              class="w-5 h-5 text-blue-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                              />
+                            </svg>
+                          </span>
+                          <div class="flex-1">
+                            <div class="font-medium text-gray-900 font-mono">
+                              {pkg.original_tracking_number ||
+                                pkg.mgg_tracking_number}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              {pkg.store_name || "Unknown store"}
+                            </div>
+                          </div>
+                          <span
+                            class={`px-2 py-1 rounded-full text-xs font-medium ${
+                              pkg.status === "ready"
+                                ? "bg-green-100 text-green-800"
+                                : pkg.status === "picked_up"
+                                  ? "bg-gray-100 text-gray-600"
+                                  : "bg-orange-100 text-orange-800"
+                            }`}
+                          >
+                            {statusInfo?.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              }
+            </div>
+
+            <!-- Recent Invoices -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                  Recent Invoices
+                </h3>
+                <a
+                  href={`/admin/invoices?customer=${customerId}`}
+                  class="text-sm text-primary hover:underline"
+                >
+                  View all →
+                </a>
+              </div>
+
+              {
+                invoices.length === 0 ? (
+                  <p class="text-gray-500 text-center py-8">No invoices yet</p>
+                ) : (
+                  <div class="space-y-3">
+                    {invoices.map((invoice: any) => (
+                      <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <span class="text-2xl">🧾</span>
+                        <div class="flex-1">
+                          <div class="font-mono font-medium text-gray-900">
+                            {invoice.invoice_number}
+                          </div>
+                          <div class="text-sm text-gray-500">
+                            {invoice.item_count} items
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div class="font-medium text-gray-900">
+                            {formatGYD(invoice.total_gyd)}
+                          </div>
+                          <span
+                            class={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              invoice.status === "paid"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {invoice.status === "paid" ? "Paid" : "Unpaid"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</BaseLayout>

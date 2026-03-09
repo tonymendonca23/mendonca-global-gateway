@@ -6,9 +6,23 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "create-admin": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
-    "astro": "^5.17.1"
+    "@astrojs/netlify": "^6.6.4",
+    "@astrojs/react": "^4.0.0",
+    "@libsql/client": "^0.14.0",
+    "@tailwindcss/vite": "^4.2.0",
+    "astro": "^5.0.0",
+    "bcryptjs": "^3.0.3",
+    "nanoid": "^5.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "resend": "^4.0.0",
+    "tailwindcss": "^4.2.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
   }
 }

@@ -1,0 +1,103 @@
+---
+import db from "../lib/db";
+
+// Fetch latest approved comments for landing page
+const result = await db.execute({
+    sql: `
+    SELECT c.id, c.rating, c.comment, c.created_at,
+           u.name as customer_name, u.customer_code
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.is_approved = 1
+    ORDER BY c.created_at DESC
+    LIMIT 6
+  `,
+    args: [],
+});
+
+const comments = result.rows as any[];
+---
+
+<section class="py-24 bg-slate-950 text-white relative overflow-hidden">
+    <div class="container mx-auto px-4 md:px-6 relative z-10">
+        <div class="max-w-3xl mx-auto text-center mb-14">
+            <p
+                class="text-xs font-semibold tracking-[0.25em] text-primary/70 uppercase mb-4"
+            >
+                Community Feedback
+            </p>
+            <h2
+                class="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4"
+            >
+                Shippers who already trust MGG.
+            </h2>
+            <p class="text-sm md:text-base text-slate-300">
+                Real customers. Real freight. See why contractors and everyday
+                shoppers choose Mendonca Global Gateway for US–Guyana shipping.
+            </p>
+        </div>
+
+        {
+            comments.length === 0 ? (
+                <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center max-w-2xl mx-auto">
+                    <p class="text-slate-300 text-sm">
+                        Reviews will appear here once customers start sharing
+                        their feedback.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div class="grid gap-6 md:gap-8 md:grid-cols-2 lg:grid-cols-3 mb-10">
+                        {comments.map((review: any) => (
+                            <article class="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 md:p-7 flex flex-col justify-between shadow-[0_18px_40px_rgba(15,23,42,0.8)]">
+                                <div class="mb-6">
+                                    <div class="flex items-center gap-1 text-amber-400 mb-3">
+                                        {Array.from({ length: 5 }).map(
+                                            (_, idx) => (
+                                                <span aria-hidden="true">
+                                                    {idx < (review.rating || 5)
+                                                        ? "★"
+                                                        : "☆"}
+                                                </span>
+                                            ),
+                                        )}
+                                    </div>
+                                    <p class="text-sm md:text-[0.95rem] leading-relaxed text-slate-100 line-clamp-5">
+                                        “{review.comment}”
+                                    </p>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-slate-400">
+                                    <div>
+                                        <p class="font-semibold text-slate-100">
+                                            {
+                                                (
+                                                    review.customer_name ||
+                                                    "MGG Customer"
+                                                ).split(" ")[0]
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+
+                    <div class="text-center">
+                        <a
+                            href="/reviews"
+                            class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-slate-900 text-sm font-semibold tracking-wide hover:bg-slate-100 transition-colors duration-200 shadow-md"
+                        >
+                            See all reviews
+                        </a>
+                    </div>
+                </>
+            )
+        }
+    </div>
+
+    <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_radial-gradient(circle_at_bottom,_rgba(251,191,36,0.12),_transparent_55%)] opacity-60"
+    >
+    </div>
+</section>

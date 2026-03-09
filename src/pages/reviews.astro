@@ -1,0 +1,110 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import db from "../lib/db";
+
+const result = await db.execute({
+    sql: `
+    SELECT c.id, c.rating, c.comment, c.created_at,
+           u.name as customer_name, u.customer_code
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.is_approved = 1
+    ORDER BY c.created_at DESC
+    LIMIT 100
+  `,
+    args: [],
+});
+
+const comments = result.rows as any[];
+---
+
+<Layout title="Customer Reviews">
+    <Header />
+
+    <main class="pt-32 pb-20 bg-slate-950 text-white min-h-screen">
+        <section class="container mx-auto px-4 md:px-6">
+            <div class="max-w-3xl mx-auto text-center mb-12">
+                <p
+                    class="text-xs font-semibold tracking-[0.25em] text-primary/70 uppercase mb-4"
+                >
+                    Ratings & Reviews
+                </p>
+                <h1
+                    class="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4"
+                >
+                    What customers say about MGG.
+                </h1>
+                <p
+                    class="text-sm md:text-base text-slate-300 max-w-2xl mx-auto"
+                >
+                    Verified feedback from shippers using Mendonca Global
+                    Gateway for US to Guyana freight. We highlight real
+                    experiences so new customers know what to expect.
+                </p>
+            </div>
+
+            {
+                comments.length === 0 ? (
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center max-w-2xl mx-auto">
+                        <p class="text-slate-300 text-sm">
+                            Once customers start leaving reviews, they will
+                            appear here.
+                        </p>
+                    </div>
+                ) : (
+                    <div class="grid gap-6 md:gap-8 md:grid-cols-2 lg:grid-cols-3">
+                        {comments.map((review: any) => (
+                            <article class="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 md:p-7 flex flex-col justify-between shadow-[0_18px_40px_rgba(15,23,42,0.8)]">
+                                <div class="mb-6">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                            {review.customer_name
+                                                ? review.customer_name
+                                                      .split(" ")
+                                                      .map((n: string) => n[0])
+                                                      .join("")
+                                                      .toUpperCase()
+                                                      .substring(0, 2)
+                                                : "MG"}
+                                        </div>
+                                        <div class="flex items-center gap-1 text-amber-400">
+                                            {Array.from({ length: 5 }).map(
+                                                (_, idx) => (
+                                                    <span aria-hidden="true">
+                                                        {idx <
+                                                        (review.rating || 5)
+                                                            ? "★"
+                                                            : "☆"}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p class="text-sm md:text-[0.95rem] leading-relaxed text-slate-100">
+                                        “{review.comment}”
+                                    </p>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-slate-400">
+                                    <div>
+                                        <p class="font-semibold text-slate-100">
+                                            {
+                                                (
+                                                    review.customer_name ||
+                                                    "MGG Customer"
+                                                ).split(" ")[0]
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )
+            }
+        </section>
+    </main>
+
+    <Footer />
+</Layout>

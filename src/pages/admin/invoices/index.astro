@@ -1,0 +1,306 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import DashboardHeader from '../../../components/admin/DashboardHeader.astro';
+import db from '../../../lib/db';
+import { formatDate, formatGYD, formatUSD } from '../../../lib/utils';
+
+const staff = Astro.locals.staff!;
+
+// Get filter from URL
+const url = new URL(Astro.request.url);
+const statusFilter = url.searchParams.get('status') || '';
+const customerFilter = url.searchParams.get('customer') || '';
+const searchQuery = url.searchParams.get('search') || '';
+const page = parseInt(url.searchParams.get('page') || '1');
+const perPage = 20;
+
+// Build query
+let countSql = `SELECT COUNT(*) as total FROM invoices i`;
+let sql = `
+  SELECT 
+    i.*,
+    u.email as customer_email,
+    u.name as customer_name,
+    u.phone as customer_phone
+  FROM invoices i
+  LEFT JOIN users u ON i.customer_id = u.id
+`;
+
+const whereClauses: string[] = [];
+const args: any[] = [];
+const countArgs: any[] = [];
+
+if (statusFilter) {
+  whereClauses.push('i.status = ?');
+  args.push(statusFilter);
+  countArgs.push(statusFilter);
+}
+
+if (customerFilter) {
+  whereClauses.push('i.customer_id = ?');
+  args.push(customerFilter);
+  countArgs.push(customerFilter);
+}
+
+if (searchQuery) {
+  whereClauses.push(`(i.invoice_number LIKE ? OR u.email LIKE ? OR u.name LIKE ?)`);
+  const searchTerm = `%${searchQuery}%`;
+  args.push(searchTerm, searchTerm, searchTerm);
+  countArgs.push(searchTerm, searchTerm, searchTerm);
+}
+
+if (whereClauses.length > 0) {
+  const whereClause = ` WHERE ${whereClauses.join(' AND ')}`;
+  sql += whereClause;
+  countSql += whereClause;
+}
+
+// Get total count
+const countResult = await db.execute({ sql: countSql, args: countArgs });
+const total = (countResult.rows[0] as any)?.total || 0;
+const totalPages = Math.ceil(total / perPage);
+
+// Add pagination
+sql += ` ORDER BY i.issued_at DESC LIMIT ? OFFSET ?`;
+args.push(perPage, (page - 1) * perPage);
+
+const invoicesResult = await db.execute({ sql, args });
+const invoices = invoicesResult.rows;
+
+// Get stats
+const statsResult = await db.execute({
+  sql: `
+    SELECT 
+      COUNT(*) as total_invoices,
+      SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END) as unpaid_count,
+      SUM(CASE WHEN status = 'unpaid' THEN total_gyd ELSE 0 END) as unpaid_total,
+      SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+      SUM(CASE WHEN status = 'paid' THEN total_gyd ELSE 0 END) as paid_total,
+      SUM(CASE WHEN issued_at > strftime('%s', 'now', '-30 days') THEN 1 ELSE 0 END) as this_month_count
+    FROM invoices
+  `,
+  args: [],
+});
+const stats = statsResult.rows[0] as any;
+
+// Status options
+const STATUS_OPTIONS = {
+  unpaid: { label: 'Unpaid', color: 'red' },
+  paid: { label: 'Paid', color: 'green' },
+};
+---
+
+<BaseLayout title="Invoice Management">
+  <div class="min-h-screen">
+    <AdminSidebar />
+
+    <!-- Main Content -->
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader 
+        title="Invoice Management" 
+        subtitle="Create and manage customer invoices"
+      >
+        <a href="/admin/invoices/new" class="btn-primary">
+          + Create Invoice
+        </a>
+      </DashboardHeader>
+
+      <!-- Content -->
+      <div class="p-4 md:p-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Total Invoices</div>
+            <div class="text-3xl font-bold text-gray-900">{stats?.total_invoices || 0}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Unpaid</div>
+            <div class="text-3xl font-bold text-red-600">{stats?.unpaid_count || 0}</div>
+            <div class="text-sm text-gray-500">{formatGYD(stats?.unpaid_total || 0)}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Paid</div>
+            <div class="text-3xl font-bold text-green-600">{stats?.paid_count || 0}</div>
+            <div class="text-sm text-gray-500">{formatGYD(stats?.paid_total || 0)}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Created This Month</div>
+            <div class="text-3xl font-bold text-primary">{stats?.this_month_count || 0}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Collection Rate</div>
+            <div class="text-3xl font-bold text-gray-900">
+              {stats?.total_invoices > 0 
+                ? Math.round((stats.paid_count / stats.total_invoices) * 100) 
+                : 0}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Tabs -->
+        <div class="flex flex-wrap gap-2 mb-6">
+          <a 
+            href="?status="
+            class={`px-4 py-2 rounded-lg font-medium transition ${
+              !statusFilter ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            All ({stats?.total_invoices || 0})
+          </a>
+          {(Object.entries(STATUS_OPTIONS || {}) as [
+            string,
+            { label: string; color: string },
+          ][]).map(([status, info]) => (
+            <a 
+              href={`?status=${status}`}
+              class={`px-4 py-2 rounded-lg font-medium transition ${
+                statusFilter === status ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {info.label} ({status === 'unpaid' ? stats?.unpaid_count : stats?.paid_count || 0})
+            </a>
+          ))}
+        </div>
+
+        <!-- Search -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <form method="GET" class="flex gap-4">
+            <div class="flex-1">
+              <input 
+                type="text" 
+                name="search" 
+                value={searchQuery}
+                placeholder="Search by invoice number or customer..."
+                class="input w-full"
+              />
+            </div>
+            {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
+            {customerFilter && <input type="hidden" name="customer" value={customerFilter} />}
+            <button type="submit" class="btn-secondary">Search</button>
+            {(searchQuery || statusFilter || customerFilter) && (
+              <a href="/admin/invoices" class="btn-secondary bg-gray-100">Clear</a>
+            )}
+          </form>
+        </div>
+
+        <!-- Invoices Table -->
+        {invoices.length === 0 ? (
+          <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div class="text-6xl mb-4">🧾</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">No invoices found</h3>
+            <p class="text-gray-500 mb-6">Try adjusting your search or create a new invoice</p>
+            <a href="/admin/invoices/new" class="btn-primary">Create Invoice</a>
+          </div>
+        ) : (
+          <>
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    {invoices.map((invoice: any) => (
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="font-mono font-medium text-gray-900">{invoice.invoice_number}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="font-medium text-gray-900">{invoice.customer_name || 'Unknown'}</div>
+                          <div class="text-xs text-gray-500">{invoice.customer_email}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {invoice.item_count} items
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="font-medium text-gray-900">{formatGYD(invoice.total_gyd)}</div>
+                          <div class="text-xs text-gray-500">{formatUSD(invoice.total_usd)}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            invoice.status === 'paid' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {invoice.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(invoice.issued_at)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                          <div class="flex items-center gap-2">
+                            <a 
+                              href={`/admin/invoices/${invoice.id}`}
+                              class="text-primary hover:text-primary/80"
+                            >
+                              View
+                            </a>
+                            {invoice.status === 'unpaid' && (
+                              <>
+                                <span class="text-gray-300">|</span>
+                                <form
+                                  method="POST"
+                                  action={`/api/admin/invoices/${invoice.id}/mark-paid`}
+                                  class="inline"
+                                  onsubmit="return confirm('Mark this invoice as paid?');"
+                                >
+                                  <button 
+                                    type="submit"
+                                    class="text-green-600 hover:text-green-700"
+                                  >
+                                    Mark Paid
+                                  </button>
+                                </form>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            {totalPages > 1 && (
+              <div class="flex items-center justify-between mt-4">
+                <div class="text-sm text-gray-500">
+                  Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, total)} of {total} invoices
+                </div>
+                <div class="flex gap-2">
+                  {page > 1 && (
+                    <a 
+                      href={`?page=${page - 1}${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                      class="px-4 py-2 bg-white rounded-lg hover:bg-gray-50"
+                    >
+                      Previous
+                    </a>
+                  )}
+                  {page < totalPages && (
+                    <a 
+                      href={`?page=${page + 1}${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                      class="px-4 py-2 bg-white rounded-lg hover:bg-gray-50"
+                    >
+                      Next
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  </div>
+</BaseLayout>

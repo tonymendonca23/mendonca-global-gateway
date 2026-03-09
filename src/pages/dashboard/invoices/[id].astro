@@ -1,0 +1,331 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import db from "../../../lib/db";
+import { formatDate, formatGYD, formatUSD } from "../../../lib/utils";
+
+const user = Astro.locals.user!;
+const id = Astro.params.id!;
+
+// Load invoice for this customer
+const invoiceResult = await db.execute({
+    sql: `SELECT * FROM invoices WHERE id = ? AND customer_id = ?`,
+    args: [id, user.id],
+});
+
+const invoice = invoiceResult.rows[0] as any;
+
+if (!invoice) {
+    throw new Error("Invoice not found");
+}
+
+// Load linked packages (if any)
+const packagesResult = await db.execute({
+    sql: `
+    SELECT p.*
+    FROM invoice_line_items il
+    JOIN packages p ON il.package_id = p.id
+    WHERE il.invoice_id = ?
+    ORDER BY p.registered_at DESC
+  `,
+    args: [id],
+});
+
+const packages = packagesResult.rows as any[];
+
+const hasPdf =
+    (invoice.invoice_file_size && Number(invoice.invoice_file_size) > 0) ||
+    !!invoice.invoice_file_url;
+const pdfHref = invoice.invoice_file_size
+    ? `/api/invoices/${id}/file`
+    : invoice.invoice_file_url;
+---
+
+<BaseLayout title={`Invoice ${invoice.invoice_number}`}>
+    <div class="min-h-screen">
+        <div
+            id="customer-sidebar-backdrop"
+            class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"
+        >
+        </div>
+
+        <aside
+            id="customer-sidebar"
+            class="w-64 bg-primary text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full transition-transform duration-200 md:translate-x-0 !fixed"
+        >
+            <div class="p-4">
+                <a href="/" class="flex items-center gap-3 mb-8">
+                    <div
+                        class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm"
+                    >
+                        <img
+                            src="/logo.svg"
+                            alt="Mendonca Global Gateway Logo"
+                            class="h-8 w-auto"
+                        />
+                    </div>
+                    <span class="text-lg font-heading font-bold tracking-tight"
+                        >MGG</span
+                    >
+                </a>
+                <nav class="space-y-1">
+                    <a
+                        href="/dashboard"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span>Dashboard</span>
+                    </a>
+                    <a
+                        href="/dashboard/packages"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span>My Packages</span>
+                    </a>
+                    <a
+                        href="/dashboard/invoices"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10"
+                    >
+                        <span>Invoices</span>
+                    </a>
+                    <a
+                        href="/dashboard/profile"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span>Profile</span>
+                    </a>
+                    <a
+                        href="/dashboard/comments"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition"
+                    >
+                        <span>Comments</span>
+                    </a>
+                </nav>
+                <hr class="border-white/20 my-6" />
+                <a
+                    href="/api/auth/logout"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-white/70"
+                >
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="bg-gray-50 md:ml-64 transition-all duration-300">
+            <header
+                class="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between gap-4"
+            >
+                <div class="flex items-center gap-3">
+                    <button
+                        id="customer-sidebar-toggle"
+                        type="button"
+                        class="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        aria-label="Toggle navigation"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1
+                            class="text-2xl font-heading font-bold text-primary"
+                        >
+                            Invoice {invoice.invoice_number}
+                        </h1>
+                        <p class="text-sm text-gray-500">
+                            Review the charges for this invoice.
+                        </p>
+                    </div>
+                </div>
+                <a
+                    href="/dashboard/invoices"
+                    class="text-sm text-primary hover:text-primary/80"
+                >
+                    ← Back to Invoices
+                </a>
+            </header>
+
+            <div class="p-4 md:p-6 space-y-6">
+                <div
+                    class="bg-white rounded-lg shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                >
+                    <div>
+                        <div class="text-sm text-gray-500">Status</div>
+                        <span
+                            class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                invoice.status === "paid"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                            }`}
+                        >
+                            {invoice.status === "paid" ? "Paid" : "Unpaid"}
+                        </span>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500">Issued</div>
+                        <div class="font-medium text-gray-900">
+                            {formatDate(invoice.issued_at)}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500">Total Due</div>
+                        <div class="text-xl font-semibold text-primary">
+                            {formatGYD(invoice.total_gyd)}
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            {formatUSD(invoice.total_usd)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div
+                        class="lg:col-span-2 bg-white rounded-lg shadow-sm p-6"
+                    >
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                            Packages on this Invoice
+                        </h2>
+                        {
+                            packages.length === 0 ? (
+                                <p class="text-sm text-gray-500">
+                                    No individual packages are listed for this
+                                    invoice.
+                                </p>
+                            ) : (
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Tracking Number
+                                                </th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Description
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            {packages.map((pkg: any) => (
+                                                <tr>
+                                                    <td class="px-4 py-2 font-mono text-sm text-primary">
+                                                        {pkg.original_tracking_number ||
+                                                            "N/A"}
+                                                    </td>
+                                                    <td class="px-4 py-2 text-sm text-gray-700">
+                                                        {pkg.description || "-"}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
+                        }
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                            Charges Breakdown (GYD)
+                        </h2>
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">
+                                    Total Shipping Fee
+                                </dt>
+                                <dd class="font-medium">
+                                    {formatGYD(invoice.subtotal_shipping || 0)}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Import Fee</dt>
+                                <dd class="font-medium">
+                                    {formatGYD(invoice.subtotal_customs || 0)}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Handling Fee</dt>
+                                <dd class="font-medium">
+                                    {
+                                        formatGYD(
+                                            invoice.import_handling_duty || 0,
+                                        )
+                                    }
+                                </dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Storage Fee</dt>
+                                <dd class="font-medium">
+                                    {formatGYD(invoice.subtotal_storage || 0)}
+                                </dd>
+                            </div>
+                            <hr class="my-2" />
+                            <div
+                                class="flex justify-between text-base font-semibold"
+                            >
+                                <dt class="text-gray-800">Total Due</dt>
+                                <dd class="text-primary">
+                                    {formatGYD(invoice.total_gyd || 0)}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        {
+                            hasPdf && (
+                                <div class="mt-4 text-sm text-gray-600">
+                                    Attached PDF:
+                                    <a
+                                        href={pdfHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-primary hover:text-primary/80 underline ml-1"
+                                    >
+                                        View Invoice PDF
+                                    </a>
+                                </div>
+                            )
+                        }
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</BaseLayout>
+
+<script>
+  const sidebar = document.getElementById("customer-sidebar") || document.getElementById("admin-sidebar");
+  const backdrop = document.getElementById("customer-sidebar-backdrop") || document.getElementById("admin-sidebar-backdrop");
+  const toggleButtons = document.querySelectorAll("#customer-sidebar-toggle, #admin-sidebar-toggle");
+  const mainContent = document.querySelector("main");
+
+  function toggleSidebar() {
+    const isHidden = (sidebar?.classList.contains("-translate-x-full") && window.innerWidth < 768) || 
+                     sidebar?.style.transform.includes('-100%');
+    
+    if (isHidden) {
+      sidebar?.classList.remove("-translate-x-full");
+      sidebar?.style.removeProperty('transform');
+      mainContent?.style.removeProperty('margin-left');
+      backdrop?.classList.remove("hidden");
+    } else {
+      sidebar?.classList.add("-translate-x-full");
+      sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
+      mainContent?.style.setProperty('margin-left', '0', 'important');
+      backdrop?.classList.add("hidden");
+    }
+  }
+
+  toggleButtons.forEach(btn => btn.addEventListener("click", toggleSidebar));
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => {
+      toggleSidebar();
+    });
+  }
+</script>

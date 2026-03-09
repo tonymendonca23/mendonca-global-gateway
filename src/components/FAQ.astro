@@ -1,0 +1,323 @@
+---
+import ContactButton from "./ContactButton.astro";
+
+// Define the FAQ item interface
+interface FAQItem {
+  question: string;
+  answer: string;
+  isHtml?: boolean;
+}
+
+// Component props with default values
+const {
+  headline = "Frequently Asked Questions (FAQ)",
+  subheadline = "Here are answers to some of the most common questions we receive. If you don't find what you're looking for, feel free to reach out to us directly.",
+  faqItems = [
+    {
+      question: "How does Mendonca's Global Gateway work?",
+      answer: `We make it easy for you to shop from your favorite U.S.-based online stores (like Amazon, SHEIN, and Fashion Nova) and have your items delivered straight to your doorstep in Guyana. 
+      
+      <p class="mt-2 font-semibold">Here's how it works:</p> 
+      <ul class="list-disc pl-6 mt-2 space-y-1 text-gray-600 dark:text-gray-400"> 
+        <li>Shop online and use our U.S. mailbox address as your shipping address.</li> 
+        <li>Your packages will arrive at our U.S.-based warehouse, managed by Guyana Freight Services Inc.</li> 
+        <li>We consolidate your orders (if needed), handle customs clearance, and ship your items to Guyana.</li> 
+        <li>Once cleared, your items are delivered to your address in Guyana.</li> 
+      </ul>`,
+      isHtml: true,
+    },
+    {
+      question: "What is the U.S. mailbox address I should use for my orders?",
+      answer: `After signing up you will receive a mailbox address. When shopping online use the following address: 
+      
+      <div class="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mt-3 border border-gray-200 dark:border-slate-800 font-mono text-sm leading-relaxed"> 
+        GUY MGG<br> 
+        CO [Your Name]<br> 
+        4120 West 104 Street, Suite 20<br> 
+        Hialeah, FL 33018<br> 
+        Tel: (305) 468-3255 
+      </div> 
+      
+      <p class="mt-3 text-sm text-primary dark:text-primary-light font-medium">Note: Replace "CO [Your Name]" with your full name when placing orders.</p>`,
+      isHtml: true,
+    },
+    {
+      question: "What happens after my package arrives at the U.S. warehouse?",
+      answer: `Once your package arrives at the U.S. warehouse: 
+      
+      <ul class="list-disc pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
+        <li>It will be processed and consolidated with any other orders you may have (if applicable).</li> 
+        <li>The package will then be shipped to Guyana on the next available flight (Mondays and Thursdays).</li> 
+        <li>Customs clearance is handled by Guyana Freight Services Inc., and your items will be cleared on Tuesdays and Fridays.</li> 
+      </ul>`,
+      isHtml: true,
+    },
+    {
+      question: "What costs will I incur when my package arrives in Guyana?",
+      answer: `You'll only pay for: 
+      
+      <ul class="list-disc pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
+        <li><span class="font-bold text-gray-900 dark:text-white">Freight Handling:</span> The cost of shipping your package from the U.S. to Guyana.</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">VAT (Value Added Tax):</span> Calculated based on the value of your item and paid after customs clearance.</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">No hidden fees:</span> What you see is what you pay!</li> 
+      </ul>`,
+      isHtml: true,
+    },
+    {
+      question: "How long does it take for my package to arrive in Guyana?",
+      answer: `<ul class="list-disc pl-6 space-y-2 text-gray-600 dark:text-gray-400"> 
+        <li>Flights depart the U.S. on Mondays and Thursdays.</li> 
+        <li>Customs clearance happens on Tuesdays and Fridays.</li> 
+        <li>After clearance, your package will be delivered to your address in Guyana within 1–2 business days.</li> 
+      </ul>`,
+      isHtml: true,
+    },
+    {
+      question: "What is your storage policy?",
+      answer: `<p>Upon invoicing, customers have 4 days to collect their packages. From Day 5 onwards, storage fees of $500 GYD per day will apply.</p>
+      
+      <p class="mt-3 text-primary dark:text-primary-light font-medium italic">We recommend collecting your packages promptly to avoid additional storage fees.</p>`,
+      isHtml: true,
+    },
+    {
+      question: "Do you offer ocean freight services?",
+      answer:
+        "Not yet! Currently, we only offer air freight services. However, we're exploring options for ocean freight in the future to better serve our customers with larger shipments.",
+    },
+    {
+      question: "What if my package gets lost or damaged?",
+      answer: `We take every precaution to ensure your items arrive safely. However, if something goes wrong: 
+      
+      <ul class="list-disc pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
+        <li>Notify us immediately via email or WhatsApp.</li> 
+        <li>We'll have an investigation done by the warehouse and work to resolve it as quickly as possible.</li> 
+      </ul>`,
+      isHtml: true,
+    },
+    {
+      question: "Can I track my package?",
+      answer: `We don't have a real-time tracking portal yet. However, you'll receive an email notification when your package arrives at our U.S. warehouse, as well as updates when it leaves the U.S. and when it arrives in Guyana. We'll keep you informed every step of the way!`,
+    },
+    {
+      question: "Are there any restrictions on what I can ship?",
+      answer: `Certain items are prohibited or restricted due to customs regulations. These include: 
+      
+      <ul class="list-disc pl-6 mt-3 space-y-1 text-gray-600 dark:text-gray-400"> 
+        <li>Hazardous materials (e.g., flammable liquids, explosives)</li> 
+        <li>Perishable goods (unless refrigerated shipping becomes available)</li> 
+        <li>Illegal or counterfeit items</li> 
+      </ul> 
+      
+      <p class="mt-3 text-sm italic">If you're unsure whether an item is allowed, contact us before purchasing.</p>`,
+      isHtml: true,
+    },
+    {
+      question: "How do I get started?",
+      answer: `It's simple: 
+      
+      <ol class="list-decimal pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
+        <li>Sign up with us by providing your details when you press on get started or Start Importing today Button.</li> 
+        <li>Provide your Name, Email, mobile number when signing up for our service.</li> 
+        <li>Use our U.S. mailbox address for your online purchases.</li> 
+        <li>Sit back and let us handle the rest—we'll keep you updated every step of the way!</li> 
+      </ol>`,
+      isHtml: true,
+    },
+  ] as FAQItem[],
+} = Astro.props;
+---
+
+<section
+  id="faq"
+  class="py-24 relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300"
+>
+  <!-- Background Glow -->
+  <div
+    class="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 dark:bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 pointer-events-none z-0"
+  >
+  </div>
+
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md text-secondary dark:text-secondary-light text-sm font-bold tracking-wider uppercase mb-6 shadow-sm border border-slate-300/50 dark:border-slate-700"
+      >
+        Answers
+      </div>
+      <h2
+        class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight"
+      >
+        {headline}
+      </h2>
+      <p
+        class="text-xl text-slate-500 dark:text-gray-400 font-light max-w-2xl mx-auto"
+      >
+        {subheadline}
+      </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto space-y-4">
+      {
+        faqItems.map((item: FAQItem, index: number) => (
+          <div
+            class="faq-item bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-800/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
+            data-index={index}
+          >
+            <button
+              class="faq-trigger w-full flex items-center justify-between p-6 md:p-8 text-left focus:outline-none focus:ring-4 focus:ring-primary/10 rounded-2xl group"
+              aria-expanded="false"
+              aria-controls={`faq-answer-${index}`}
+            >
+              <span class="text-lg md:text-xl font-bold text-slate-900 dark:text-white pr-8 group-hover:text-primary transition-colors">
+                {item.question}
+              </span>
+              <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200/50 dark:border-slate-700 transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:text-white">
+                <svg
+                  class="faq-icon w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform duration-300 group-hover:text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+            </button>
+
+            <div
+              id={`faq-answer-${index}`}
+              class="faq-content grid transition-all duration-300 ease-in-out px-6 md:px-8"
+            >
+              <div class="overflow-hidden">
+                <div class="pb-6 md:pb-8 pt-2">
+                  <div class="w-full h-px bg-slate-100 dark:bg-slate-800 mb-6" />
+                  {item.isHtml ? (
+                    <div
+                      class="prose prose-lg dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 leading-relaxed marker:text-primary"
+                      set:html={item.answer}
+                    />
+                  ) : (
+                    <p class="text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
+                      {item.answer}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- CTA Section -->
+    <div class="mt-16 text-center">
+      <div class="flex justify-center">
+        <a
+          href="https://wa.me/5927090091"
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-900 dark:text-white border border-white/20 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 hover:border-green-500/50 hover:text-green-600 dark:hover:text-green-400 transition-all duration-300 font-bold shadow-lg transform hover:-translate-y-1"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6 text-green-500"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 0a12 12 0 1 1 0 24c-2.126 0-4.148-.553-5.914-1.52L0 24l1.545-5.882A11.94 11.94 0 0 1 0 12 12 12 0 0 1 12 0z"
+            ></path>
+          </svg>
+          Chat on WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq-item.active {
+    border-color: rgba(26, 54, 93, 0.2);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.dark) .faq-item.active {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+  }
+
+  .faq-content {
+    grid-template-rows: 0fr;
+  }
+
+  .faq-item.active .faq-content {
+    grid-template-rows: 1fr;
+  }
+  .faq-item.active .faq-content > div {
+    min-height: 0;
+  }
+  .faq-item.active .faq-icon {
+    transform: rotate(45deg);
+    color: white;
+  }
+
+  .faq-item.active .faq-trigger div {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  /* Custom Prose Styles */
+  :global(.prose) {
+    --tw-prose-body: #4b5563;
+    --tw-prose-headings: #111827;
+    --tw-prose-bold: #111827;
+    --tw-prose-bullets: #1a365d;
+  }
+
+  :global(.dark .prose) {
+    --tw-prose-body: #9ca3af;
+    --tw-prose-headings: #ffffff;
+    --tw-prose-bold: #ffffff;
+    --tw-prose-bullets: #1a365d;
+  }
+</style>
+
+<script>
+  function initFAQ() {
+    const faqItems = document.querySelectorAll(".faq-item");
+
+    faqItems.forEach((item) => {
+      const trigger = item.querySelector(".faq-trigger");
+
+      if (!trigger) return;
+
+      trigger.addEventListener("click", () => {
+        const isExpanded = trigger.getAttribute("aria-expanded") === "true";
+
+        // Close all other items
+        faqItems.forEach((otherItem) => {
+          if (otherItem !== item) {
+            const otherTrigger = otherItem.querySelector(".faq-trigger");
+            otherItem.classList.remove("active");
+            if (otherTrigger) {
+              otherTrigger.setAttribute("aria-expanded", "false");
+            }
+          }
+        });
+
+        // Toggle current item
+        item.classList.toggle("active");
+        trigger.setAttribute("aria-expanded", (!isExpanded).toString());
+      });
+    });
+  }
+
+  // Initialize on page load
+  initFAQ();
+  // Support Astro View Transitions
+  document.addEventListener("astro:page-load", initFAQ);
+</script>

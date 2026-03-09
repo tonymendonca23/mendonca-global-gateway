@@ -1,0 +1,307 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../../components/admin/DashboardHeader.astro";
+import db from "../../../lib/db";
+import {
+    generateId,
+    generateTrackingNumber,
+    STORE_OPTIONS,
+} from "../../../lib/utils";
+
+const staff = Astro.locals.staff!;
+
+// Get customers for dropdown
+const customersResult = await db.execute({
+    sql: `SELECT id, email, name, customer_code, branch_preference FROM users ORDER BY name, email`,
+    args: [],
+});
+const customers = customersResult.rows as any[];
+
+let success = false;
+let error = "";
+let createdTrackingNumber = "";
+let createdCustomerName = "";
+
+if (Astro.request.method === "POST") {
+    try {
+        const formData = await Astro.request.formData();
+
+        const customerId = formData.get("customerId")?.toString();
+        const storeName = formData.get("store_name")?.toString().trim();
+        const originalTracking = formData
+            .get("original_tracking_number")
+            ?.toString()
+            .trim();
+        const description =
+            formData.get("description")?.toString().trim() || null;
+        const valueUsdRaw = formData.get("value_usd")?.toString().trim();
+        const valueUsd = valueUsdRaw ? parseFloat(valueUsdRaw) : null;
+
+        if (!customerId) {
+            error = "Please select a customer";
+        } else if (!storeName || !originalTracking) {
+            error = "Store name and tracking number are required";
+        } else {
+            // Ensure customer exists and get branch preference
+            const customerResult = await db.execute({
+                sql: `SELECT id, name, branch_preference FROM users WHERE id = ?`,
+                args: [customerId],
+            });
+            const customer = customerResult.rows[0] as any;
+
+            if (!customer) {
+                error = "Selected customer not found";
+            } else {
+                // Check for duplicate tracking for this customer
+                const existing = await db.execute({
+                    sql: `SELECT id FROM packages WHERE original_tracking_number = ? AND customer_id = ?`,
+                    args: [originalTracking, customerId],
+                });
+
+                if (existing.rows.length > 0) {
+                    error =
+                        "This tracking number is already registered for this customer";
+                } else {
+                    // Generate unique tracking number
+                    let mggTrackingNumber = generateTrackingNumber();
+                    let attempts = 0;
+                    while (attempts < 10) {
+                        const check = await db.execute({
+                            sql: `SELECT id FROM packages WHERE mgg_tracking_number = ?`,
+                            args: [mggTrackingNumber],
+                        });
+                        if (check.rows.length === 0) break;
+                        mggTrackingNumber = generateTrackingNumber();
+                        attempts++;
+                    }
+
+                    const id = generateId();
+                    const now = Math.floor(Date.now() / 1000);
+                    const branch = customer.branch_preference || "georgetown";
+
+                    await db.execute({
+                        sql: `INSERT INTO packages (
+              id, mgg_tracking_number, original_tracking_number, customer_id,
+              store_name, description, value_usd, status, registered_at, received_at, status_updated_at, branch
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'at_warehouse', ?, ?, ?, ?)`,
+                        args: [
+                            id,
+                            mggTrackingNumber,
+                            originalTracking,
+                            customerId,
+                            storeName,
+                            description,
+                            valueUsd,
+                            now,
+                            now,
+                            now,
+                            branch,
+                        ],
+                    });
+
+                    success = true;
+                    createdTrackingNumber = mggTrackingNumber;
+                    createdCustomerName = customer.name || customer.email;
+                }
+            }
+        }
+    } catch (e) {
+        ;
+        error = "Failed to create package. Please try again.";
+    }
+}
+---
+
+<BaseLayout title="Add Package">
+    <div class="min-h-screen">
+        <AdminSidebar />
+
+        <!-- Main Content -->
+        <main class="bg-[#f1f5f9] min-h-screen transition-all duration-300">
+            <DashboardHeader
+                title="Add Package"
+                subtitle="Register a package on behalf of a customer"
+            >
+                <a href="/admin/packages" class="btn-secondary"
+                    >← Back to Packages</a
+                >
+            </DashboardHeader>
+
+            <div class="p-4 md:p-8">
+                {
+                    success ? (
+                        <div class="bg-white rounded-lg shadow-sm p-12 text-center max-w-lg mx-auto">
+                            <div class="text-6xl mb-4">✅</div>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">
+                                Package Created!
+                            </h3>
+                            <p class="text-gray-500 mb-4">
+                                Package for{" "}
+                                <span class="font-semibold">
+                                    {createdCustomerName}
+                                </span>{" "}
+                                has been registered.
+                            </p>
+                            <p class="text-gray-500 mb-6">
+                                MGG Tracking Number:
+                                <span class="font-mono font-bold text-primary ml-1">
+                                    {createdTrackingNumber}
+                                </span>
+                            </p>
+                            <div class="flex gap-4 justify-center">
+                                <a href="/admin/packages" class="btn-primary">
+                                    View Packages
+                                </a>
+                                <a
+                                    href="/admin/packages/new"
+                                    class="btn-secondary"
+                                >
+                                    Add Another
+                                </a>
+                            </div>
+                        </div>
+                    ) : (
+                        <form method="POST" class="max-w-2xl mx-auto">
+                            {error && (
+                                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+                                <div>
+                                    <label
+                                        for="customerId"
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                    >
+                                        Select Customer *
+                                    </label>
+                                    <select
+                                        id="customerId"
+                                        name="customerId"
+                                        class="input w-full"
+                                        required
+                                    >
+                                        <option value="">
+                                            -- Select a customer --
+                                        </option>
+                                        {customers.map((customer) => (
+                                            <option
+                                                value={(customer as any).id}
+                                            >
+                                                {(customer as any).name ||
+                                                    (customer as any)
+                                                        .email}{" "}
+                                                {(customer as any)
+                                                    .customer_code && (
+                                                    <span>
+                                                        (
+                                                        {
+                                                            (customer as any)
+                                                                .customer_code
+                                                        }
+                                                        )
+                                                    </span>
+                                                )}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label
+                                        for="store_name"
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                    >
+                                        Store Name *
+                                    </label>
+                                    <select
+                                        id="store_name"
+                                        name="store_name"
+                                        class="input w-full"
+                                        required
+                                    >
+                                        <option value="">
+                                            Select a store...
+                                        </option>
+                                        {STORE_OPTIONS.map((store) => (
+                                            <option value={store}>
+                                                {store}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label
+                                        for="original_tracking_number"
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                    >
+                                        Original Tracking Number *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="original_tracking_number"
+                                        name="original_tracking_number"
+                                        class="input w-full"
+                                        placeholder="Carrier/store tracking number"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        for="description"
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                    >
+                                        Description (optional)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="description"
+                                        name="description"
+                                        class="input w-full"
+                                        placeholder="e.g., Shoes, Electronics, Books"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        for="value_usd"
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                    >
+                                        Estimated Value (USD) (optional)
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                            $
+                                        </span>
+                                        <input
+                                            type="number"
+                                            id="value_usd"
+                                            name="value_usd"
+                                            class="input pl-8 w-full"
+                                            placeholder="0.00"
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 flex justify-end">
+                                    <button
+                                        type="submit"
+                                        class="btn-primary px-8"
+                                    >
+                                        Create Package
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    )
+                }
+            </div>
+        </main>
+    </div>
+</BaseLayout>

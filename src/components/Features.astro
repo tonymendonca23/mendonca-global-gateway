@@ -1,0 +1,127 @@
+---
+// Define props for customization
+const { 
+  features = [ 
+    { 
+      title: 'Customs Expertise, Zero Delays', 
+      description: 
+        'We clear Amazon, SHEIN, and Fashion Nova orders seamlessly. No paperwork stress, no confiscation risks—just smooth customs clearance.', 
+      icon: 'document'
+    }, 
+    { 
+      title: 'Live Shipment Tracking', 
+      description: 
+        'Watch your package move from Florida to Georgetown in real-time. Get SMS/email alerts at every step—no more guessing where your shipment is.',
+      icon: 'location' 
+    }, 
+    { 
+      title: 'Consolidate then Ship', 
+      description: 
+        'Shop seamlessly from any US e-commerce platform. We consolidate and ship multiple orders in one package.',
+      icon: 'box'
+    }, 
+    { 
+      title: '24/7 Guyana Support Team', 
+      description: 
+        "Stuck? We're a call, chat, or WhatsApp away. Local experts resolve issues fast—because your time matters.",
+      icon: 'chat'
+    }, 
+  ],
+  title = "Ship Smarter from the USA to Guyana",
+  subtitle = "<span class='font-semibold'>Fast.</span> <span class='font-semibold'>Transparent.</span> <span class='font-semibold'>Zero Customs Headaches.</span>"
+} = Astro.props; 
+---
+
+<section id="features" class="py-24 bg-gradient-to-b from-white-bg to-gray-50 relative overflow-hidden">
+  <!-- Decorative Elements -->
+  <div class="absolute top-0 right-1/3 w-72 h-72 bg-primary opacity-5 rounded-full -translate-y-1/2"></div>
+  <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-secondary opacity-5 rounded-full translate-y-1/2"></div>
+  
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <!-- Section Header -->
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-text-dark mb-4">{title}</h2>
+      <p class="text-lg bg-gray-50 inline-block px-6 py-3 rounded-lg shadow-sm" set:html={subtitle}></p>
+      
+      <!-- Decorative Element -->
+      <div class="w-20 h-1 bg-gradient-to-r from-primary to-secondary mx-auto mt-8"></div>
+    </div>
+    
+    <!-- Features Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+      {features.map((feature, index) => (
+        <div class="bg-white-bg rounded-xl shadow-lg p-6 border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
+          <!-- Card Background Accent -->
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary transform origin-left transition-transform duration-300 scale-x-0 group-hover:scale-x-100"></div>
+          
+          <div class="flex items-start gap-5">
+            <!-- Icon -->
+            <div class="p-3 bg-primary/10 rounded-lg text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-white-bg mt-1">
+              {feature.icon === "document" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              )}
+              {feature.icon === "location" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+              )}
+              {feature.icon === "box" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              )}
+              {feature.icon === "chat" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              )}
+            </div>
+            
+            <div class="flex-1">
+              <!-- Title -->
+              <h3 class="text-xl font-bold text-text-dark mb-3 group-hover:text-primary transition-colors duration-300">
+                {feature.title}
+              </h3>
+              
+              <!-- Description with animation -->
+              <p class="text-gray-600 leading-relaxed transform transition-all duration-500 opacity-90 group-hover:opacity-100">
+                {feature.description}
+              </p>
+            </div>
+          </div>
+          
+          <!-- Decorative Corner Element -->
+          <div class="absolute bottom-0 right-0 w-12 h-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-secondary/10">
+              <path d="M0 48C0 21.49 21.49 0 48 0V48H0Z" fill="currentColor"/>
+            </svg>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    <!-- Bottom CTA -->
+    <div class="mt-16 text-center">
+      <a href="#contact" class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white-bg px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-1 shadow-md hover:shadow-lg">
+        Get Started
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </a>
+    </div>
+  </div>
+  
+  <!-- Subtle Background Pattern -->
+  <div class="absolute inset-0 opacity-5 pointer-events-none">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="features-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M0 10 L40 10 M10 0 L10 40" stroke="currentColor" stroke-width="0.5" fill="none" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#features-grid)" />
+    </svg>
+  </div>
+</section>

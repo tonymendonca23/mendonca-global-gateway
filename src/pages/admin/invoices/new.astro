@@ -1,0 +1,487 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../../components/admin/DashboardHeader.astro";
+import db from "../../../lib/db";
+import {
+  generateInvoiceNumber,
+  formatGYD,
+  formatUSD,
+  usdToGyd,
+  generateId,
+} from "../../../lib/utils";
+
+const staff = Astro.locals.staff!;
+
+// Get exchange rate and shipping rate from settings
+const settingsResult = await db.execute({
+  sql: `SELECT key, value FROM settings WHERE key IN ('exchange_rate', 'shipping_rate_per_lb')`,
+  args: [],
+});
+
+let exchangeRate = 222;
+let shippingRatePerLb = 500;
+for (const row of settingsResult.rows as any[]) {
+  if (row.key === "exchange_rate") {
+    exchangeRate = parseFloat(row.value || "222") || 222;
+  }
+  if (row.key === "shipping_rate_per_lb") {
+    shippingRatePerLb = parseFloat(row.value || "500") || 500;
+  }
+}
+
+// Get customers for dropdown
+const customersResult = await db.execute({
+  sql: `SELECT id, email, name FROM users ORDER BY name, email`,
+  args: [],
+});
+const customers = customersResult.rows;
+
+// Get selected customer
+const url = new URL(Astro.request.url);
+const selectedCustomerId = url.searchParams.get("customer");
+
+// Handle form submission
+let success = false;
+let error = "";
+let createdInvoiceNumber = "";
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const customerId = formData.get("customerId")?.toString();
+    const packageIds = formData.getAll("packageIds").map((id) => id.toString());
+    const uploadedFile = formData.get("invoice_file") as File | null;
+
+    if (!customerId) {
+      error = "Please select a customer";
+    } else if (packageIds.length === 0) {
+      error = "Please select at least one package";
+    } else {
+      // Read manual charge inputs (all in GYD)
+      const importFee =
+        parseInt(formData.get("import_fee")?.toString() || "0", 10) || 0;
+      const handlingFee =
+        parseInt(formData.get("handling_fee")?.toString() || "0", 10) || 0;
+      const storageFee =
+        parseInt(formData.get("storage_fee")?.toString() || "0", 10) || 0;
+
+      // Calculate shipping automatically from package weights and setting
+      let totalWeight = 0;
+      let shippingFee = 0;
+      for (const packageId of packageIds) {
+        const pkgResult = await db.execute({
+          sql: `SELECT * FROM packages WHERE id = ? AND customer_id = ?`,
+          args: [packageId, customerId],
+        });
+        const pkg = pkgResult.rows[0] as any;
+        if (pkg && pkg.weight_lbs) {
+          const weight = pkg.weight_lbs;
+          totalWeight += weight;
+          shippingFee += weight * shippingRatePerLb;
+        }
+      }
+
+      shippingFee = Math.round(shippingFee);
+
+      const totalGyd = shippingFee + importFee + handlingFee + storageFee;
+
+      if (totalGyd <= 0) {
+        error = "Please enter at least one charge amount";
+      } else {
+        const costPerLb = shippingRatePerLb;
+
+        const totalUsd = Number((totalGyd / exchangeRate).toFixed(2));
+
+        // Generate invoice number
+        const countResult = await db.execute({
+          sql: `SELECT COUNT(*) as count FROM invoices`,
+          args: [],
+        });
+        const count = (countResult.rows[0] as any).count + 1;
+        createdInvoiceNumber = `INV-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`;
+
+        // Handle optional PDF upload (store directly in the database)
+        let invoiceFileUrl: string | null = null;
+        let invoiceFileName: string | null = null;
+        let invoiceFileMime: string | null = null;
+        let invoiceFileSize: number | null = null;
+        let invoiceFileData: Buffer | null = null;
+        let invoiceFileUploadedAt: number | null = null;
+
+        if (uploadedFile && uploadedFile.size > 0) {
+          if (uploadedFile.type !== "application/pdf") {
+            throw new Error("Invoice file must be a PDF");
+          }
+
+          const buffer = Buffer.from(await uploadedFile.arrayBuffer());
+          const safeName = uploadedFile.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+          const filename = `${createdInvoiceNumber}-${safeName || "invoice.pdf"}`;
+
+          invoiceFileName = filename;
+          invoiceFileMime = uploadedFile.type || "application/pdf";
+          invoiceFileSize = buffer.length;
+          invoiceFileData = buffer;
+          invoiceFileUploadedAt = Math.floor(Date.now() / 1000);
+        }
+
+        // Create invoice with manual charges
+        const invoiceId = generateId();
+        await db.execute({
+          sql: `
+            INSERT INTO invoices (
+              id,
+              invoice_number,
+              customer_id,
+              subtotal_shipping,
+              subtotal_customs,
+              subtotal_storage,
+              total_usd,
+              total_gyd,
+              item_count,
+              import_handling_duty,
+              weight_lbs,
+              cost_per_lb,
+              invoice_file_url,
+              invoice_file_data,
+              invoice_file_name,
+              invoice_file_mime,
+              invoice_file_size,
+              invoice_file_uploaded_at,
+              status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid')
+          `,
+          args: [
+            invoiceId,
+            createdInvoiceNumber,
+            customerId,
+            shippingFee,
+            importFee,
+            storageFee,
+            totalUsd,
+            totalGyd,
+            packageIds.length,
+            handlingFee,
+            totalWeight,
+            costPerLb,
+            invoiceFileUrl,
+            invoiceFileData,
+            invoiceFileName,
+            invoiceFileMime,
+            invoiceFileSize,
+            invoiceFileUploadedAt,
+          ],
+        });
+
+        // Link selected packages to invoice (no per-package charges yet)
+        for (const packageId of packageIds) {
+          await db.execute({
+            sql: `
+              INSERT INTO invoice_line_items (id, invoice_id, package_id, shipping_cost, customs_duty, storage_fee, line_total)
+              VALUES (?, ?, ?, 0, 0, 0, 0)
+            `,
+            args: [generateId(), invoiceId, packageId],
+          });
+        }
+
+        success = true;
+      }
+    }
+  } catch (e) {
+    ;
+    error = "Failed to create invoice. Please try again.";
+  }
+}
+
+// Get packages for selected customer
+let packages: any[] = [];
+if (selectedCustomerId) {
+  const packagesResult = await db.execute({
+    sql: `
+      SELECT * FROM packages 
+      WHERE customer_id = ? AND status = 'ready'
+      ORDER BY registered_at DESC
+    `,
+    args: [selectedCustomerId],
+  });
+  packages = packagesResult.rows as any[];
+}
+---
+
+<BaseLayout title="Create Invoice">
+  <div class="min-h-screen">
+    <AdminSidebar />
+
+    <!-- Main Content -->
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader
+        title="Create Invoice"
+        subtitle="Generate a new invoice for a customer"
+      >
+        <a href="/admin/invoices" class="btn-secondary"> ← Back to Invoices </a>
+      </DashboardHeader>
+
+      <!-- Content -->
+      <div class="p-4 md:p-8">
+        {
+          success ? (
+            <div class="bg-white rounded-lg shadow-sm p-12 text-center max-w-lg mx-auto">
+              <div class="text-6xl mb-4">✅</div>
+              <h3 class="text-xl font-semibold text-gray-700 mb-2">
+                Invoice Created!
+              </h3>
+              <p class="text-gray-500 mb-4">
+                Invoice{" "}
+                <span class="font-mono font-bold text-primary">
+                  {createdInvoiceNumber}
+                </span>{" "}
+                has been created successfully.
+              </p>
+              <div class="flex gap-4 justify-center">
+                <a href="/admin/invoices" class="btn-primary">
+                  View All Invoices
+                </a>
+                <a href="/admin/invoices/new" class="btn-secondary">
+                  Create Another
+                </a>
+              </div>
+            </div>
+          ) : (
+            <form
+              method="POST"
+              enctype="multipart/form-data"
+              class="max-w-2xl mx-auto"
+            >
+              {error && (
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                  {error}
+                </div>
+              )}
+
+              <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                  Customer Selection
+                </h2>
+
+                <div>
+                  <label
+                    for="customerId"
+                    class="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Select Customer *
+                  </label>
+                  <select
+                    name="customerId"
+                    id="customerId"
+                    class="input w-full"
+                    required
+                    onchange="window.location.href = `/admin/invoices/new?customer=${this.value}`"
+                  >
+                    <option value="">-- Select a customer --</option>
+                    {customers.map((customer: any) => (
+                      <option
+                        value={customer.id}
+                        selected={selectedCustomerId === customer.id}
+                      >
+                        {customer.name || customer.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedCustomerId && (
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                  <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    Select Packages
+                  </h2>
+
+                  {packages.length === 0 ? (
+                    <div class="text-center py-8 text-gray-500">
+                      <div class="text-4xl mb-2">📦</div>
+                      <p>No packages ready for invoicing.</p>
+                      <p class="text-sm">
+                        Packages must have "Ready for Pickup" status to be
+                        invoiced.
+                      </p>
+                    </div>
+                  ) : (
+                    <div class="space-y-3">
+                      <p class="text-sm text-gray-500 mb-4">
+                        Select the packages to include in this invoice. Shipping
+                        cost is automatically calculated at GYD $
+                        {formatGYD(shippingRatePerLb).replace(/[^0-9]/g, "")}/lb
+                        based on weight.
+                      </p>
+
+                      {packages.map((pkg: any) => (
+                        <label class="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="packageIds"
+                            value={pkg.id}
+                            class="w-5 h-5 text-primary rounded"
+                          />
+                          <div class="flex-1">
+                            <div class="font-medium text-gray-900">
+                              {pkg.original_tracking_number ||
+                                pkg.mgg_tracking_number}
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              {pkg.store_name} •{" "}
+                              {pkg.description || "No description"}
+                            </div>
+                          </div>
+                          <div class="text-right">
+                            <div class="font-medium text-gray-900">
+                              {pkg.weight_lbs} lbs
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              {formatGYD(
+                                (pkg.weight_lbs || 0) * shippingRatePerLb,
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedCustomerId && packages.length > 0 && (
+                <>
+                  <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                      Charge Details (GYD)
+                    </h2>
+                    <p class="text-sm text-gray-500 mb-4">
+                      Enter the final charges that should appear on the invoice.
+                      All amounts are in Guyana Dollars (GYD).
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          for="import_fee"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Import Fee
+                        </label>
+                        <input
+                          type="number"
+                          id="import_fee"
+                          name="import_fee"
+                          min="0"
+                          step="1"
+                          class="input w-full"
+                          placeholder="e.g. 510"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          for="handling_fee"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Handling Fee
+                        </label>
+                        <input
+                          type="number"
+                          id="handling_fee"
+                          name="handling_fee"
+                          min="0"
+                          step="1"
+                          class="input w-full"
+                          placeholder="e.g. 510"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          for="storage_fee"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Storage Fee (optional)
+                        </label>
+                        <input
+                          type="number"
+                          id="storage_fee"
+                          name="storage_fee"
+                          min="0"
+                          step="1"
+                          class="input w-full"
+                          placeholder="e.g. 1800"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      id="invoice-total"
+                      class="mt-4 text-right text-sm text-gray-600"
+                    />
+                  </div>
+
+                  <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                      Upload Invoice PDF (optional)
+                    </h2>
+                    <p class="text-sm text-gray-500 mb-3">
+                      Attach the final invoice PDF that matches these charges.
+                      This file will be stored and linked to the customer
+                      record.
+                    </p>
+                    <input
+                      type="file"
+                      name="invoice_file"
+                      accept="application/pdf"
+                      class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    />
+                  </div>
+
+                  <div class="flex gap-4">
+                    <button type="submit" class="btn-primary flex-1">
+                      Create Invoice
+                    </button>
+                    <a href="/admin/invoices" class="btn-secondary">
+                      Cancel
+                    </a>
+                  </div>
+                </>
+              )}
+            </form>
+          )
+        }
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  const sidebar = document.getElementById("customer-sidebar") || document.getElementById("admin-sidebar");
+  const backdrop = document.getElementById("customer-sidebar-backdrop") || document.getElementById("admin-sidebar-backdrop");
+  const toggleButtons = document.querySelectorAll("#customer-sidebar-toggle, #admin-sidebar-toggle");
+  const mainContent = document.querySelector("main");
+
+  function toggleSidebar() {
+    const isHidden = (sidebar?.classList.contains("-translate-x-full") && window.innerWidth < 768) || 
+                     sidebar?.style.transform.includes('-100%');
+    
+    if (isHidden) {
+      sidebar?.classList.remove("-translate-x-full");
+      sidebar?.style.removeProperty('transform');
+      mainContent?.style.removeProperty('margin-left');
+      backdrop?.classList.remove("hidden");
+    } else {
+      sidebar?.classList.add("-translate-x-full");
+      sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
+      mainContent?.style.setProperty('margin-left', '0', 'important');
+      backdrop?.classList.add("hidden");
+    }
+  }
+
+  toggleButtons.forEach(btn => btn.addEventListener("click", toggleSidebar));
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => {
+      toggleSidebar();
+    });
+  }
+</script>

@@ -1,0 +1,82 @@
+:root {
+    --primary: #1e293b;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --purple: #8b5cf6;
+    --yellow: #eab308;
+    --bg: #f1f5f9;
+    --muted: #64748b;
+}
+
+/* Basic admin utilities */
+body {
+    background: var(--bg);
+}
+
+/* Sidebar */
+.sidebar {
+    background: var(--primary);
+}
+
+.sidebar .nav-item {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Cards */
+.card,
+.kpi-card {
+    background: #fff;
+    border-radius: 12px;
+}
+
+/* Status badges */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #fff;
+}
+
+.badge-registered {
+    background: var(--accent);
+}
+
+.badge-at_warehouse {
+    background: var(--yellow);
+}
+
+.badge-in_transit {
+    background: var(--warning);
+}
+
+.badge-customs {
+    background: var(--purple);
+}
+
+.badge-ready {
+    background: var(--success);
+}
+
+.badge-picked_up {
+    background: #6b7280;
+}
+
+/* Simple chart bar coloring uses data-color attribute */
+[data-color] {
+    height: 100%;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto
+    }
+
+    main {
+        margin-left: 0 !important
+    }
+}

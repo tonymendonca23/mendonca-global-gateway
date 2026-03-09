@@ -1,0 +1,208 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../components/admin/DashboardHeader.astro";
+import StatCard from "../../components/admin/StatCard.astro";
+import QuickStatsCard from "../../components/admin/QuickStatsCard.astro";
+import StatusChart from "../../components/admin/StatusChart.astro";
+import PackageTable from "../../components/admin/PackageTable.astro";
+import ActivityItem from "../../components/admin/ActivityItem.astro";
+import db from "../../lib/db";
+import { formatGYD } from "../../lib/utils";
+
+const staff = Astro.locals.staff!;
+
+// Get dashboard stats
+const [
+  packagesStats,
+  customersStats,
+  invoicesStats,
+  recentPackages,
+  recentActivity,
+] = await Promise.all([
+  // Package counts by status
+  db.execute({
+    sql: `SELECT status, COUNT(*) as count FROM packages GROUP BY status`,
+    args: [],
+  }),
+  // Customer count
+  db.execute({
+    sql: `SELECT COUNT(*) as count FROM users`,
+    args: [],
+  }),
+  // Invoice stats
+  db.execute({
+    sql: `SELECT 
+            COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_count,
+            SUM(CASE WHEN status = 'unpaid' THEN total_gyd ELSE 0 END) as unpaid_total,
+            COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_count
+          FROM invoices`,
+    args: [],
+  }),
+  // Recent packages
+  db.execute({
+    sql: `SELECT 
+            p.id, p.mgg_tracking_number, p.original_tracking_number, p.store_name, p.description, 
+            p.status, p.registered_at, p.status_updated_at,
+            u.name as customer_name, u.email as customer_email
+          FROM packages p
+          LEFT JOIN users u ON p.customer_id = u.id
+          ORDER BY p.registered_at DESC
+          LIMIT 10`,
+    args: [],
+  }),
+  // Recent activity (simplified - just show recent package updates)
+  db.execute({
+    sql: `SELECT 
+            mgg_tracking_number, original_tracking_number, status, status_updated_at
+          FROM packages
+          ORDER BY status_updated_at DESC
+          LIMIT 5`,
+    args: [],
+  }),
+]);
+
+// Parse stats
+const statusCounts: Record<string, number> = {};
+packagesStats.rows.forEach((row: any) => {
+  statusCounts[row.status] = row.count;
+});
+
+const totalPackages = Object.values(statusCounts).reduce(
+  (a, b) => a + b,
+  0,
+) as number;
+const customerCount = (customersStats.rows[0] as any)?.count || 0;
+const invoiceStats = invoicesStats.rows[0] as any;
+const unpaidCount = invoiceStats?.unpaid_count || 0;
+const unpaidTotal = invoiceStats?.unpaid_total || 0;
+
+// Status configuration for chart
+const statusConfig = [
+  { key: "at_warehouse", label: "At Warehouse", color: "#eab308" },
+  { key: "in_transit", label: "In Transit", color: "#f59e0b" },
+  { key: "customs", label: "Customs", color: "#8b5cf6" },
+  { key: "ready", label: "Ready", color: "#10b981" },
+  { key: "picked_up", label: "Picked Up", color: "#64748b" },
+];
+---
+
+<BaseLayout title="Admin Dashboard">
+  <div class="min-h-screen">
+    <AdminSidebar />
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader
+        title="Dashboard"
+        userName={staff.name}
+        subtitle="Here's your overview."
+      />
+
+      <div class="p-4 md:p-8">
+        <!-- Secondary Stats Grid -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+          <QuickStatsCard
+            title="Outstanding Payments"
+            value={formatGYD(unpaidTotal)}
+            subtitle={`${unpaidCount} unpaid invoice${unpaidCount !== 1 ? "s" : ""}`}
+            icon="chart"
+            variant="warning"
+          />
+          <QuickStatsCard
+            title="Total Customers"
+            value={customerCount}
+            subtitle="Registered users"
+            icon="users"
+            variant="info"
+          />
+          <QuickStatsCard
+            title="Picked Up"
+            value={statusCounts["picked_up"] || 0}
+            subtitle="Completed shipments"
+            icon="check"
+            variant="success"
+          />
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Packages & Chart Section -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Status Distribution Chart -->
+            <div
+              class="bg-white rounded-xl p-6 shadow-sm border border-slate-200"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-slate-800">
+                  Package Status Distribution
+                </h2>
+                <a
+                  href="/admin/packages"
+                  class="text-sm text-blue-600 hover:underline"
+                >
+                  View all →
+                </a>
+              </div>
+              <StatusChart
+                statusConfig={statusConfig}
+                statusCounts={statusCounts}
+                totalPackages={totalPackages}
+              />
+            </div>
+
+            <!-- Recent Packages Table -->
+            <div
+              class="bg-white rounded-xl p-6 shadow-sm border border-slate-200"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-slate-800">
+                  Recent Packages
+                </h2>
+                <a
+                  href="/admin/packages"
+                  class="text-sm text-blue-600 hover:underline"
+                >
+                  View all →
+                </a>
+              </div>
+              <PackageTable packages={recentPackages.rows as any[]} />
+            </div>
+          </div>
+
+          <!-- Activity Sidebar -->
+          <div
+            class="bg-white rounded-xl p-6 shadow-sm border border-slate-200"
+          >
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">
+              Recent Activity
+            </h2>
+            <div class="space-y-4">
+              {
+                recentActivity.rows.map((activity: any) => (
+                  <ActivityItem
+                    trackingNumber={
+                      activity.original_tracking_number ||
+                      activity.mgg_tracking_number
+                    }
+                    status={activity.status}
+                    updatedAt={activity.status_updated_at}
+                  />
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<style>
+  .kpi-card:hover {
+    transform: translateY(-4px);
+  }
+  .kpi-card {
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+</style>

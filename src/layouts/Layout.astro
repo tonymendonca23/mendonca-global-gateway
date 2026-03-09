@@ -1,12 +1,43 @@
+---
+import "../styles/global.css";
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" type="image/svg+xml" href="/logo.svg" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<title>{title} | Mendonca Global Gateway</title>
+		<script>
+			// Initialize theme before page paints
+			(function () {
+				try {
+					var storedTheme = localStorage.getItem("theme");
+					var prefersDark =
+						window.matchMedia &&
+						window.matchMedia("(prefers-color-scheme: dark)")
+							.matches;
+					if (
+						storedTheme === "dark" ||
+						(!storedTheme && prefersDark)
+					) {
+						document.documentElement.classList.add("dark");
+					} else {
+						document.documentElement.classList.remove("dark");
+					}
+				} catch (e) {
+					// Fail silently if localStorage is not available
+				}
+			})();
+		</script>
 	</head>
 	<body>
 		<slot />

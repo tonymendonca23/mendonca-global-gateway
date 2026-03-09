@@ -1,0 +1,133 @@
+---
+import ContactButton from "./ContactButton.astro";
+
+// Define props for customization
+const {
+  title = "No Hidden Games. Just Honest Rates.",
+  subtitle = "Know exactly what you are paying for before you ship.",
+} = Astro.props;
+
+const pricingOptions = [
+  {
+    location: "Georgetown",
+    rate: "2.70",
+    currencySymbol: "$",
+    currencyLabel: "USD",
+    description: "Head Office Delivery",
+    features: ["Fast Air Freight", "Free Consolidation", "Real-time Updates"],
+    primary: true,
+  },
+  {
+    location: "Region 1 / Mabaruma",
+    rate: "300",
+    currencySymbol: "$",
+    currencyLabel: "GYD",
+    description: "Hinterland Connection",
+    features: ["Specialized Route", "Secure Handling", "Local Pickup"],
+    primary: false,
+  },
+];
+
+const details = [
+  { label: "Exchange Rate", value: "$222 GYD = $1 USD" },
+  { label: "Customs Duties", value: "Assessed by GRA and handled by us." },
+  { label: "Storage", value: "First days are free. Afterwards, $500 GYD/day applies." },
+];
+---
+
+<section id="pricing" class="py-24 relative overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+  
+  <!-- Glowing Abstract Background Elements -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-[400px] bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 blur-[120px] rounded-[100%] pointer-events-none z-0"></div>
+
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <!-- Section Header -->
+    <div class="text-center max-w-3xl mx-auto mb-20">
+      <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
+        {title}
+      </h2>
+      <p class="text-xl text-slate-500 dark:text-slate-400 font-light">
+        {subtitle}
+      </p>
+    </div>
+
+    <!-- Pricing Cards Block -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
+      {
+        pricingOptions.map((option) => (
+          <div class={`relative rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-500 transform hover:-translate-y-2 group ${option.primary ? "bg-white/80 dark:bg-slate-900/80 shadow-[0_20px_60px_-15px_rgba(26,54,93,0.1)] border border-primary/20" : "bg-white/50 dark:bg-slate-800/40 shadow-xl border border-slate-200/50 dark:border-slate-700/50"}`}>
+            
+            {/* Ambient inner glow for primary */}
+            {option.primary && (
+              <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/20 rounded-full blur-[60px] z-0"></div>
+            )}
+
+            <div class="relative z-10 p-8 md:p-12 text-center h-full flex flex-col">
+              <div class={`inline-block px-5 py-2 rounded-full text-xs font-bold mb-8 uppercase tracking-wider ${option.primary ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light" : "bg-slate-200/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300"}`}>
+                Air Freight Rate
+              </div>
+
+              <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                {option.location}
+              </h3>
+
+              <div class="flex justify-center items-baseline mb-2 mt-4">
+                <span class="text-3xl font-medium text-slate-400 mr-1">
+                  {option.currencySymbol}
+                </span>
+                <span class="text-7xl font-extrabold text-slate-900 dark:text-white tracking-tighter">
+                  {option.rate}
+                </span>
+              </div>
+              <div class="text-slate-500 dark:text-slate-400 font-medium text-sm mb-10 border-b border-slate-200/50 dark:border-slate-700/50 pb-10">
+                {option.currencyLabel} per Pound (lb)
+              </div>
+
+              <ul class="text-left space-y-5 mb-10 max-w-[240px] mx-auto flex-1">
+                {option.features.map((feature) => (
+                  <li class="flex items-center gap-4">
+                    <div class={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${option.primary ? 'bg-primary/10 text-primary' : 'bg-slate-200/50 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span class="text-slate-700 dark:text-slate-300 font-medium tracking-tight">
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <ContactButton
+                text="Get Started Now"
+                variant="signup"
+                className={`w-full block py-4 rounded-2xl transition-all duration-300 font-bold text-lg ${option.primary ? "bg-primary text-white hover:bg-primary-600 shadow-[0_0_30px_-10px_rgba(26,54,93,0.5)]" : "bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600 shadow-lg"}`}
+              />
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Informational Glass Bar -->
+    <div class="max-w-5xl mx-auto bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-8 border border-white/50 dark:border-slate-800 shadow-lg">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-800">
+        {
+          details.map((detail, i) => (
+            <div class={`space-y-2 ${i !== 0 ? 'md:pl-8 pt-6 md:pt-0' : ''}`}>
+              <div class="inline-flex items-center gap-2">
+                 <div class="w-2 h-2 rounded-full bg-secondary"></div>
+                 <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                   {detail.label}
+                 </div>
+              </div>
+              <div class="text-sm md:text-base text-slate-900 dark:text-white font-semibold leading-relaxed">
+                {detail.value}
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</section>

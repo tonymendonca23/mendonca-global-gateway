@@ -1,0 +1,42 @@
+---
+import type { APIRoute } from 'astro';
+import { verifyMagicLink, createSession, setSessionCookie } from '../../../lib/auth';
+import db from '../../../lib/db';
+
+export const GET: APIRoute = async ({ url, cookies, redirect }) => {
+  const token = url.searchParams.get('token');
+
+  if (!token) {
+    return redirect('/admin/login?error=invalid_token', 302);
+  }
+
+  // Verify the magic link
+  const result = await verifyMagicLink(token);
+
+  if (!result.success || !result.email || !result.isStaff) {
+    return redirect('/admin/login?error=invalid_or_expired', 302);
+  }
+
+  const { email } = result;
+
+  // Check if staff exists and is active
+  const staffResult = await db.execute({
+    sql: 'SELECT id FROM staff WHERE email = ? AND is_active = 1',
+    args: [email],
+  });
+
+  if (staffResult.rows.length === 0) {
+    return redirect('/admin/login?error=not_authorized', 302);
+  }
+
+  const staffId = staffResult.rows[0].id as string;
+
+  // Create session
+  const sessionToken = await createSession(staffId, true);
+
+  // Set cookie
+  setSessionCookie(cookies, sessionToken, true);
+
+  // Redirect to admin dashboard
+  return redirect('/admin', 302);
+};

@@ -1,0 +1,144 @@
+---
+import { getEnvContactNumbers } from "../lib/utils";
+import SocialLinks from "./SocialLinks.astro";
+
+const year = new Date().getFullYear();
+const { whatsappNumber } = getEnvContactNumbers();
+const contactInfo = {
+  email: "ship@mendoncagg.com",
+  whatsapp: `+592 ${whatsappNumber.slice(-7)}`,
+  whatsappLink: `https://wa.me/${whatsappNumber}`,
+};
+---
+
+<footer
+  class="bg-black text-white pt-24 pb-8 overflow-hidden relative border-t border-slate-800"
+>
+  <div
+    class="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+  >
+  </div>
+
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8 mb-16">
+      <!-- Brand Start -->
+      <div class="md:col-span-4 lg:col-span-5 flex flex-col gap-6">
+        <a href="/" class="flex items-center gap-3">
+          <div class="bg-primary/10 dark:bg-primary/20 p-2 rounded-xl">
+            <img src="/logo.svg" alt="MGG Logo" class="h-8 w-auto" />
+          </div>
+          <span class="font-bold text-xl tracking-tight"
+            >Mendonca Global Gateway<span class="text-primary">.</span></span
+          >
+        </a>
+        <p class="text-slate-400 text-sm leading-relaxed max-w-sm">
+          Guyana's most trusted logistics partner. We provide seamless air
+          freight solutions to Georgetown and the Hinterland, bringing the world
+          to your doorstep.
+        </p>
+        <div class="mt-2">
+          <SocialLinks />
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="md:col-span-4 lg:col-span-3">
+        <h4 class="text-white font-bold mb-6 tracking-wide text-sm uppercase">
+          Quick Links
+        </h4>
+        <nav class="flex flex-col gap-4 text-slate-400 text-sm font-medium">
+          <a href="#services" class="hover:text-primary transition-colors w-fit"
+            >How It Works</a
+          >
+          <a href="#pricing" class="hover:text-primary transition-colors w-fit"
+            >Shipping Rates</a
+          >
+          <a href="#faq" class="hover:text-primary transition-colors w-fit"
+            >Help & FAQ</a
+          >
+          <a
+            href="/terms_and_conditions"
+            class="hover:text-primary transition-colors w-fit"
+            >Terms of Service</a
+          >
+        </nav>
+      </div>
+
+      <!-- Support Details -->
+      <div class="md:col-span-4 lg:col-span-4">
+        <h4 class="text-white font-bold mb-6 tracking-wide text-sm uppercase">
+          Customer Support
+        </h4>
+        <div class="space-y-4">
+          <a
+            href={contactInfo.whatsappLink}
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-4 group p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-green-500/10 text-green-400 flex items-center justify-center"
+            >
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"
+                ><path
+                  d="M20.52 3.48A12.07 12.07 0 0012 0C5.37 0 0 5.37 0 12a11.93 11.93 0 001.64 6.06L0 24l6.24-1.64A11.93 11.93 0 0012 24c6.63 0 12-5.37 12-12a11.93 11.93 0 00-3.48-8.52zM12 22a9.93 9.93 0 01-5.09-1.39l-.36-.21-3.7.97.99-3.6-.23-.37A9.93 9.93 0 012 12c0-5.52 4.48-10 10-10s10 4.48 10 10-4.48 10-10 10zm5.2-7.8c-.28-.14-1.65-.81-1.9-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.44-2.25-1.41-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.34.42-.51.14-.17.18-.29.28-.48.09-.19.05-.36-.02-.5-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.62-.47-.16-.01-.36-.01-.56-.01-.19 0-.5.07-.76.34-.26.27-1 1-1 2.43 0 1.43 1.03 2.81 1.18 3 .15.19 2.03 3.1 4.93 4.23.69.3 1.23.48 1.65.61.69.22 1.32.19 1.81.12.55-.08 1.65-.67 1.89-1.32.23-.65.23-1.21.16-1.32-.07-.11-.25-.18-.53-.32z"
+                ></path></svg
+              >
+            </div>
+            <div>
+              <div class="text-xs text-slate-500 font-bold uppercase mb-0.5">
+                WhatsApp Hub
+              </div>
+              <div class="text-white font-medium text-sm">
+                {contactInfo.whatsapp}
+              </div>
+            </div>
+          </a>
+
+          <a
+            href={`mailto:${contactInfo.email}`}
+            class="flex items-center gap-4 group p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 text-primary-light flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                ></path></svg
+              >
+            </div>
+            <div>
+              <div class="text-xs text-slate-500 font-bold uppercase mb-0.5">
+                Email Support
+              </div>
+              <div class="text-white font-medium text-sm">
+                {contactInfo.email}
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-slate-500"
+    >
+      <p>&copy; {year} Mendonca's Global Gateway. All rights reserved.</p>
+      <div
+        class="flex items-center gap-1.5 bg-white/5 py-1.5 px-3 rounded-full border border-white/10"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+        ></span>
+        All Systems Operational
+      </div>
+    </div>
+  </div>
+</footer>

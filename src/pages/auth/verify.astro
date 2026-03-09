@@ -1,0 +1,64 @@
+---
+import type { APIRoute } from 'astro';
+import { verifyMagicLink, createSession, setSessionCookie, getSessionToken, validateSession } from '../../lib/auth';
+import db from '../../lib/db';
+import { nanoid } from 'nanoid';
+
+export const GET: APIRoute = async ({ url, cookies, redirect }) => {
+  const token = url.searchParams.get('token');
+
+  if (!token) {
+    return redirect('/auth/login?error=invalid_token', 302);
+  }
+
+  // Verify the magic link
+  const result = await verifyMagicLink(token);
+
+  if (!result.success || !result.email) {
+    return redirect('/auth/login?error=invalid_or_expired', 302);
+  }
+
+  const { email, isStaff } = result;
+
+  // Check if user exists
+  const table = isStaff ? 'staff' : 'users';
+  const existingUser = await db.execute({
+    sql: `SELECT id FROM ${table} WHERE email = ?`,
+    args: [email],
+  });
+
+  let userId: string;
+
+  if (existingUser.rows.length === 0) {
+    // Auto-create new customers
+    if (!isStaff) {
+      userId = nanoid();
+      const warehouseAddress = generateWarehouseAddress();
+      
+      await db.execute({
+        sql: `INSERT INTO users (id, email, name, us_warehouse_address) VALUES (?, ?, ?, ?)`,
+        args: [userId, email, email.split('@')[0], warehouseAddress],
+      });
+    } else {
+      // Staff must be created manually
+      return redirect('/admin/login?error=not_authorized', 302);
+    }
+  } else {
+    userId = existingUser.rows[0].id as string;
+  }
+
+  // Create session
+  const sessionToken = await createSession(userId, isStaff || false);
+
+  // Set cookie
+  setSessionCookie(cookies, sessionToken, isStaff || false);
+
+  // Redirect to dashboard
+  const dashboardPath = isStaff ? '/admin' : '/dashboard';
+  return redirect(dashboardPath, 302);
+};
+
+function generateWarehouseAddress(): string {
+  const id = nanoid(6).toUpperCase();
+  return `MGG-${id}\n1234 NW 72nd Ave\nMiami, FL 33166\nUSA`;
+}

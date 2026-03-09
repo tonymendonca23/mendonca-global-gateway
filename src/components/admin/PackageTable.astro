@@ -1,0 +1,66 @@
+---
+import { getStatusColor } from "../../lib/utils";
+
+interface Package {
+    id: number;
+    mgg_tracking_number: string;
+    original_tracking_number?: string | null;
+    store_name: string | null;
+    description: string | null;
+    status: string;
+    customer_name: string | null;
+    customer_email: string | null;
+}
+
+interface Props {
+    packages: Package[];
+}
+
+const { packages } = Astro.props;
+---
+
+<div class="overflow-x-auto">
+    <table class="w-full">
+        <thead>
+            <tr
+                class="text-left text-sm text-slate-500 border-b border-slate-200"
+            >
+                <th class="pb-3 font-medium">Tracking</th>
+                <th class="pb-3 font-medium">Customer</th>
+                <th class="pb-3 font-medium">Store</th>
+                <th class="pb-3 font-medium">Status</th>
+                <th class="pb-3 font-medium"></th>
+            </tr>
+        </thead>
+        <tbody class="text-sm">
+            {
+                packages.map((pkg) => (
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="py-3 font-mono text-blue-600">
+                            {pkg.original_tracking_number ||
+                                pkg.mgg_tracking_number}
+                        </td>
+                        <td class="py-3">{pkg.customer_name || "Unknown"}</td>
+                        <td class="py-3">{pkg.store_name || "-"}</td>
+                        <td class="py-3">
+                            <span
+                                class="inline-block px-2 py-1 text-xs rounded"
+                                style={`background: ${getStatusColor(pkg.status)}; color: white`}
+                            >
+                                {pkg.status.replace("_", " ")}
+                            </span>
+                        </td>
+                        <td class="py-3 text-right">
+                            <a
+                                href={`/admin/packages/${pkg.id}`}
+                                class="text-blue-600 hover:underline"
+                            >
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+                ))
+            }
+        </tbody>
+    </table>
+</div>

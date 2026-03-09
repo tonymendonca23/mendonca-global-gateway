@@ -1,0 +1,244 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import DashboardHeader from '../../../components/admin/DashboardHeader.astro';
+import db from '../../../lib/db';
+import { formatDate, formatGYD } from '../../../lib/utils';
+
+const staff = Astro.locals.staff!;
+
+// Get filter from URL
+const url = new URL(Astro.request.url);
+const searchQuery = url.searchParams.get('search') || '';
+const page = parseInt(url.searchParams.get('page') || '1');
+const perPage = 20;
+
+// Build query
+let countSql = `SELECT COUNT(*) as total FROM users`;
+let sql = `
+  SELECT 
+    u.*,
+    (SELECT COUNT(*) FROM packages WHERE customer_id = u.id) as package_count,
+    (SELECT COUNT(*) FROM packages WHERE customer_id = u.id AND status = 'ready') as ready_count,
+    (SELECT COUNT(*) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as unpaid_invoice_count,
+    (SELECT COALESCE(SUM(total_gyd), 0) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as total_owed
+  FROM users u
+`;
+
+const whereClauses: string[] = [];
+const args: any[] = [];
+const countArgs: any[] = [];
+
+if (searchQuery) {
+  whereClauses.push(`(u.email LIKE ? OR u.name LIKE ? OR u.phone LIKE ?)`);
+  const searchTerm = `%${searchQuery}%`;
+  args.push(searchTerm, searchTerm, searchTerm);
+  countArgs.push(searchTerm, searchTerm, searchTerm);
+}
+
+if (whereClauses.length > 0) {
+  const whereClause = ` WHERE ${whereClauses.join(' AND ')}`;
+  sql += whereClause;
+  countSql += whereClause;
+}
+
+// Get total count
+const countResult = await db.execute({ sql: countSql, args: countArgs });
+const total = (countResult.rows[0] as any)?.total || 0;
+const totalPages = Math.ceil(total / perPage);
+
+// Add pagination
+sql += ` ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
+args.push(perPage, (page - 1) * perPage);
+
+const customersResult = await db.execute({ sql, args });
+const customers = customersResult.rows;
+
+// Get overall stats
+const statsResult = await db.execute({
+  sql: `
+    SELECT 
+      COUNT(*) as total_customers,
+      SUM(CASE WHEN created_at > strftime('%s', 'now', '-30 days') THEN 1 ELSE 0 END) as new_this_month
+    FROM users
+  `,
+  args: [],
+});
+const stats = statsResult.rows[0] as any;
+---
+
+<BaseLayout title="Customer Management">
+  <div class="min-h-screen">
+    <AdminSidebar />
+
+    <!-- Main Content -->
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader 
+        title="Customer Management" 
+        subtitle="View and manage customer accounts"
+      >
+        <Fragment />
+      </DashboardHeader>
+
+      <!-- Content -->
+      <div class="p-4 md:p-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Total Customers</div>
+            <div class="text-3xl font-bold text-primary">{stats?.total_customers || 0}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">New This Month</div>
+            <div class="text-3xl font-bold text-green-600">{stats?.new_this_month || 0}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">With Ready Packages</div>
+            <div class="text-3xl font-bold text-orange-600">{customers.filter((c: any) => c.ready_count > 0).length}</div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">With Unpaid Invoices</div>
+            <div class="text-3xl font-bold text-red-600">{customers.filter((c: any) => c.unpaid_invoice_count > 0).length}</div>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <form method="GET" class="flex gap-4">
+            <div class="flex-1">
+              <input 
+                type="text" 
+                name="search" 
+                value={searchQuery}
+                placeholder="Search by name, email, or phone..."
+                class="input w-full"
+              />
+            </div>
+            <button type="submit" class="btn-secondary">Search</button>
+            {searchQuery && (
+              <a href="/admin/customers" class="btn-secondary bg-gray-100">Clear</a>
+            )}
+          </form>
+        </div>
+
+        <!-- Customers Table -->
+        {customers.length === 0 ? (
+          <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div class="text-6xl mb-4">👥</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">No customers found</h3>
+            <p class="text-gray-500">Try adjusting your search criteria</p>
+          </div>
+        ) : (
+          <>
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Packages</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Ready</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Unpaid</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    {customers.map((customer: any) => (
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                          <div class="font-medium text-gray-900">{customer.name || 'No name'}</div>
+                          <div class="text-sm text-gray-500">{customer.email}</div>
+                          {customer.customer_code && (
+                            <div class="text-xs text-gray-400 mt-0.5">
+                              ID: {customer.customer_code}
+                            </div>
+                          )}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {customer.phone || '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <span class="font-medium text-gray-900">{customer.package_count}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          {customer.ready_count > 0 ? (
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {customer.ready_count} ready
+                            </span>
+                          ) : (
+                            <span class="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          {customer.unpaid_invoice_count > 0 ? (
+                            <div>
+                              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {customer.unpaid_invoice_count} unpaid
+                              </span>
+                              <div class="text-xs text-red-600 mt-1">{formatGYD(customer.total_owed)}</div>
+                            </div>
+                          ) : (
+                            <span class="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(customer.created_at)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                          <div class="flex gap-2">
+                            <a 
+                              href={`/admin/customers/${customer.id}`}
+                              class="text-primary hover:text-primary/80"
+                            >
+                              View
+                            </a>
+                            <span class="text-gray-300">|</span>
+                            <a 
+                              href={`/admin/invoices?customer=${customer.id}`}
+                              class="text-primary hover:text-primary/80"
+                            >
+                              Invoices
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            {totalPages > 1 && (
+              <div class="flex items-center justify-between mt-4">
+                <div class="text-sm text-gray-500">
+                  Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, total)} of {total} customers
+                </div>
+                <div class="flex gap-2">
+                  {page > 1 && (
+                    <a 
+                      href={`?page=${page - 1}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                      class="px-4 py-2 bg-white rounded-lg hover:bg-gray-50"
+                    >
+                      Previous
+                    </a>
+                  )}
+                  {page < totalPages && (
+                    <a 
+                      href={`?page=${page + 1}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                      class="px-4 py-2 bg-white rounded-lg hover:bg-gray-50"
+                    >
+                      Next
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  </div>
+</BaseLayout>

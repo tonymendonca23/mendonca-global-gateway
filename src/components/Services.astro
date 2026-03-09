@@ -1,0 +1,126 @@
+---
+import ContactButton from './ContactButton.astro';
+
+// Define the 5 steps
+const steps = [
+  {
+    number: "1",
+    title: "Shop Online",
+    description: "Buy from Amazon, SHEIN, Walmart, or any US store.",
+    icon: "shopping-cart"
+  },
+  {
+    number: "2",
+    title: "Ship to Us",
+    description: "Use the personal US Warehouse Address we give you at checkout.",
+    icon: "warehouse"
+  },
+  {
+    number: "3",
+    title: "Send Us The Tracking",
+    description: "<strong>Crucial Step:</strong> As soon as the store ships your item, WhatsApp or Email us the tracking number. This ensures we are looking out for your package.",
+    icon: "tracking"
+  },
+  {
+    number: "4",
+    title: "We Fly & Clear",
+    description: "We receive it, fly it to Guyana, and handle the customs clearance on your behalf.",
+    icon: "plane"
+  },
+  {
+    number: "5",
+    title: "Pickup & Pay",
+    description: "We notify you when it's ready. Pay your invoice and pick up your package!",
+    icon: "package"
+  }
+];
+
+const {
+  title = "Shipping Made Simple",
+  subtitle = "Don't guess where your package is. Follow our simple process:"
+} = Astro.props;
+---
+
+<section id="services" class="py-24 bg-slate-50 dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
+  <!-- Decorative Glass Orbs -->
+  <div class="absolute top-1/4 left-0 w-72 h-72 bg-primary/20 dark:bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
+  <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/20 dark:bg-secondary/10 rounded-full blur-[100px] pointer-events-none"></div>
+  
+  <div class="container mx-auto px-4 md:px-6 relative z-10">
+    <!-- Section Header -->
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md text-secondary dark:text-secondary-light text-sm font-bold tracking-wider uppercase mb-6 shadow-sm border border-slate-300/50 dark:border-slate-700">
+        How it works
+      </div>
+      <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">{title}</h2>
+      <p class="text-xl text-slate-500 dark:text-slate-400 font-light max-w-2xl mx-auto">{subtitle}</p>
+    </div>
+    
+    <!-- Bento Grid for Services -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      
+      {steps.map((step, index) => {
+        // Create variations in the bento layout based on the index
+        let spanClass = "col-span-1 md:col-span-1 lg:col-span-1";
+        if (index === 2) spanClass = "col-span-1 md:col-span-2 lg:col-span-1 row-span-1 lg:row-span-2";
+        if (index === 3) spanClass = "col-span-1 md:col-span-1 lg:col-span-2";
+
+        return (
+        <div class={`group relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl p-8 border border-white/50 dark:border-slate-800/50 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${spanClass}`}>
+          
+          <!-- Large faded number behind content -->
+          <div class="absolute -right-4 -top-8 text-[12rem] font-black text-slate-100 dark:text-slate-800/50 z-0 opacity-50 select-none group-hover:text-primary/10 transition-colors duration-500">
+            {step.number}
+          </div>
+
+          <div class="relative z-10 flex flex-col h-full">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/10 to-secondary/5 dark:from-secondary/20 dark:to-secondary/10 text-secondary dark:text-secondary-light flex items-center justify-center mb-6 shadow-sm backdrop-blur-sm border border-secondary/10 group-hover:scale-110 transition-transform duration-300">
+              {step.icon === "shopping-cart" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              )}
+              {step.icon === "warehouse" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              )}
+              {step.icon === "tracking" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
+              {step.icon === "plane" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+              )}
+              {step.icon === "package" && (
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              )}
+            </div>
+            
+            <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
+              {step.title}
+            </h3>
+            
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed font-medium mt-auto" set:html={step.description}></p>
+          </div>
+        </div>
+        )
+      })}
+    </div>
+    
+    <!-- CTA Section -->
+    <div class="mt-16 text-center">
+      <ContactButton 
+        text="CREATE FREE ACCOUNT" 
+        href="/auth/register" 
+        className="bg-primary text-white px-10 py-4 rounded-2xl hover:bg-primary-600 transition-all duration-300 font-bold text-lg shadow-[0_0_30px_-10px_rgba(26,54,93,0.5)] hover:shadow-primary/40 inline-flex items-center hover:-translate-y-1 transform"
+      />
+    </div>
+  </div>
+</section>
