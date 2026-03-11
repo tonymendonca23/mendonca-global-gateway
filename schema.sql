@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   us_warehouse_address TEXT,
   branch_preference TEXT DEFAULT 'georgetown',
+  email_verified INTEGER DEFAULT 0,
   last_activity INTEGER DEFAULT (unixepoch()),
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch())
@@ -65,6 +66,17 @@ CREATE TABLE IF NOT EXISTS magic_links (
 CREATE INDEX IF NOT EXISTS idx_magic_links_token ON magic_links(token_hash);
 CREATE INDEX IF NOT EXISTS idx_magic_links_email ON magic_links(email);
 
+-- Email Verification Tokens
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verification_user ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_token ON email_verification_tokens(token_hash);
+
 -- Packages (Single Inventory)
 CREATE TABLE IF NOT EXISTS packages (
   id TEXT PRIMARY KEY,
@@ -75,6 +87,7 @@ CREATE TABLE IF NOT EXISTS packages (
   description TEXT,
   weight_lbs REAL,
   value_usd REAL,
+  duty_usd REAL DEFAULT 0,
   status TEXT DEFAULT 'at_warehouse',
   receipt_image_url TEXT,
   registered_at INTEGER DEFAULT (unixepoch()),
@@ -102,6 +115,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   total_gyd INTEGER NOT NULL DEFAULT 0,
   item_count INTEGER NOT NULL DEFAULT 0,
   import_handling_duty REAL DEFAULT 0,
+  duty_fee INTEGER NOT NULL DEFAULT 0,
   weight_lbs REAL DEFAULT 0,
   cost_per_lb REAL DEFAULT 0,
   invoice_file_url TEXT,

@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
   } catch (error) {
-    ;
+    console.error('🚨 Resend verification error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'An error occurred'

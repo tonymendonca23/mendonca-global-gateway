@@ -95,6 +95,18 @@ export const GET: APIRoute = async ({ params, locals }) => {
             placeholder="Enter value"
           />
         </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Customs Duty ($)</label>
+          <input 
+            type="number" 
+            name="duty_usd" 
+            value="${pkg.duty_usd || ''}" 
+            step="0.01"
+            class="input w-full"
+            placeholder="Enter duty amount"
+          />
+        </div>
         
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -140,10 +152,23 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   }
 
   const formData = await request.formData();
-  const status = formData.get('status')?.toString();
+  const status = formData.get('status')?.toString() || 'at_warehouse';
   const weightLbs = formData.get('weight_lbs')?.toString();
   const valueUsd = formData.get('value_usd')?.toString();
+  const dutyUsd = formData.get('duty_usd')?.toString();
   const notes = formData.get('notes')?.toString();
+
+  // Get current package to check if status changed and get customer email
+  const currentPkgResult = await db.execute({
+    sql: `
+      SELECT p.*, u.email as customer_email, u.name as customer_name
+      FROM packages p
+      LEFT JOIN users u ON p.customer_id = u.id
+      WHERE p.id = ?
+    `,
+    args: [packageId]
+  });
+  const currentPkg = currentPkgResult.rows[0] as any;
 
   // Update package
   await db.execute({
@@ -153,11 +178,12 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
         status = ?,
         weight_lbs = ?,
         value_usd = ?,
+        duty_usd = ?,
         notes = ?,
         status_updated_at = strftime('%s', 'now'),
         received_at = CASE 
           WHEN status = 'at_warehouse' AND ? != 'at_warehouse' THEN NULL
-          WHEN ? = 'at_warehouse' AND (SELECT status FROM packages WHERE id = ?) != 'at_warehouse' THEN strftime('%s', 'now')
+          WHEN ? = 'at_warehouse' AND status != 'at_warehouse' THEN strftime('%s', 'now')
           ELSE received_at
         END
       WHERE id = ?
@@ -166,13 +192,30 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       status,
       weightLbs ? parseFloat(weightLbs) : null,
       valueUsd ? parseFloat(valueUsd) : null,
+      dutyUsd ? parseFloat(dutyUsd) : null,
       notes || null,
       status,
       status,
       packageId,
-      packageId,
     ],
   });
+
+  // Check if we need to send a status update email
+  if (currentPkg && currentPkg.status !== status && currentPkg.customer_email) {
+    if (['at_warehouse', 'in_transit', 'customs'].includes(status)) {
+      // Import dynamically to avoid circular dependencies if any
+      const { sendPackageStatusEmail } = await import('../../../../lib/email');
+      
+      // Fire and forget email (don't block the request if email fails)
+      sendPackageStatusEmail({
+        email: currentPkg.customer_email,
+        name: currentPkg.customer_name || 'Customer',
+        trackingNumber: currentPkg.mgg_tracking_number,
+        originalTracking: currentPkg.original_tracking_number,
+        newStatus: status
+      }).catch(err => console.error('Failed to send status email:', err));
+    }
+  }
 
   // Return success message
   const html = `
@@ -192,4 +235,28 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   return new Response(html, {
     headers: { 'Content-Type': 'text/html' },
   });
+};
+
+export const DELETE: APIRoute = async ({ params, locals }) => {
+  // Check auth
+  if (!locals.staff) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const packageId = params.id;
+
+  if (!packageId) {
+    return new Response('Package ID required', { status: 400 });
+  }
+
+  try {
+    await db.execute({
+      sql: 'DELETE FROM packages WHERE id = ?',
+      args: [packageId],
+    });
+
+    return new Response('', { status: 200 });
+  } catch (error) {
+    return new Response('Error deleting package', { status: 500 });
+  }
 };

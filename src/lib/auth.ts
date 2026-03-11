@@ -199,10 +199,16 @@ export async function sendVerificationEmail(
   try {
     const token = await createEmailVerificationToken(userId);
     const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const FROM_ADDRESS = import.meta.env.RESEND_FROM_EMAIL || 'Mendonca Global Gateway <no-reply@resend.mendoncagg.com>';
     const verificationUrl = `${baseUrl}/auth/verify-email?token=${token}`;
+    
+    // As a senior developer practice: Log the URL in development for immediate access
+    if (import.meta.env.DEV || import.meta.env.MODE === 'development' || baseUrl.includes('localhost')) {
+      console.log('🔑 [Dev] Email Verification URL:', verificationUrl);
+    }
 
     await resend.emails.send({
-      from: 'Mendonca Global Gateway <no-reply@resend.mendoncagg.com>',
+      from: FROM_ADDRESS,
       to: email,
       subject: 'Verify Your Email - Mendonca Global Gateway',
       html: `
@@ -221,7 +227,7 @@ export async function sendVerificationEmail(
 
     return { success: true };
   } catch (error) {
-    ;
+    console.error('🚨 Error sending verification email:', error);
     return { success: false, error: 'Failed to send verification email' };
   }
 }

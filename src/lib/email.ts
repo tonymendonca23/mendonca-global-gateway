@@ -49,7 +49,6 @@ export async function sendWelcomeEmail({
             <div><strong>State:</strong> New York</div>
             <div><strong>Zip Code:</strong> 11413</div>
             <div><strong>Phone:</strong> (917) 660-6872</div>
-            <div><strong>Email:</strong> customersupport@rbmtradingco.com</div>
           </div>
         </div>
 
@@ -227,5 +226,80 @@ export async function sendPasswordResetEmail({
   } catch (error) {
     ;
     return { success: false, error: 'Failed to send password reset email' };
+  }
+}
+
+interface PackageStatusEmailParams {
+  email: string;
+  name: string;
+  trackingNumber: string;
+  originalTracking?: string;
+  newStatus: string;
+}
+
+export async function sendPackageStatusEmail({
+  email,
+  name,
+  trackingNumber,
+  originalTracking,
+  newStatus,
+}: PackageStatusEmailParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const safeName = name && name.trim().length > 0 ? name.trim() : 'there';
+    const displayTracking = originalTracking ? originalTracking : trackingNumber;
+
+    let statusHeader = '';
+    let statusMessage = '';
+    
+    switch (newStatus) {
+      case 'at_warehouse':
+        statusHeader = '📦 Package Arrived at US Warehouse';
+        statusMessage = `Great news! Your package (Tracking: <strong>${displayTracking}</strong>) has successfully arrived at our US Warehouse in Miami. It is currently being processed and will be prepared for flight to Guyana soon.`;
+        break;
+      case 'in_transit':
+        statusHeader = '✈️ Package is in Transit';
+        statusMessage = `Your package (Tracking: <strong>${displayTracking}</strong>) is officially in transit! It is on its way to Guyana right now. We'll let you know once it arrives and begins customs clearance.`;
+        break;
+      case 'customs':
+        statusHeader = '📋 Package at Customs Clearance';
+        statusMessage = `Your package (Tracking: <strong>${displayTracking}</strong>) has arrived in Guyana and is currently undergoing customs clearance. This process typically takes a short while. We will notify you as soon as it's ready for pickup!`;
+        break;
+      default:
+        // Fallback for other statuses just in case
+        statusHeader = '📦 Package Status Update';
+        statusMessage = `The status of your package (Tracking: <strong>${displayTracking}</strong>) has been updated to: ${newStatus.replace('_', ' ')}.`;
+    }
+
+    const html = `
+      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; color: #1a202c;">
+        <h1 style="font-size: 22px; margin-bottom: 16px; color: #1a365d;">${statusHeader}</h1>
+        <p style="font-size: 15px; color: #4a5568; margin: 0 0 16px;">Hi ${safeName},</p>
+        <p style="font-size: 15px; color: #4a5568; margin: 0 0 24px; line-height: 1.6;">
+          ${statusMessage}
+        </p>
+        <div style="text-align: center; margin-top: 32px; margin-bottom: 32px;">
+          <a
+            href="${SITE_URL}/dashboard/packages"
+            style="display: inline-block; background-color: #1a365d; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 15px; font-weight: 600;"
+          >
+            Track in your Dashboard
+          </a>
+        </div>
+        <p style="font-size: 13px; color: #a0aec0; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+          Mendonca Global Gateway &mdash; Thank you for shipping with us.
+        </p>
+      </div>
+    `;
+
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: email,
+      subject: statusHeader,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Failed to send package status email' };
   }
 }

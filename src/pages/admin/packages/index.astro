@@ -227,6 +227,15 @@ statusCountsResult.rows.forEach((row: any) => {
                               >
                                 Update Status
                               </button>
+                              <button
+                                class="text-red-500 hover:text-red-700 transition-colors"
+                                hx-delete={`/api/admin/packages/${pkg.id}`}
+                                hx-confirm="Are you sure you want to delete this package? This cannot be undone."
+                                hx-target="closest tr"
+                                hx-swap="outerHTML swap:1s"
+                              >
+                                Delete
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -271,7 +280,7 @@ statusCountsResult.rows.forEach((row: any) => {
 
   <!-- Modal -->
   <div id="modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="items-center justify-center min-h-screen px-4">
+    <div class="flex items-center justify-center min-h-screen px-4">
       <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('modal').classList.add('hidden')"></div>
       <div class="relative bg-white rounded-lg max-w-lg w-full shadow-xl">
         <div id="modal-content">

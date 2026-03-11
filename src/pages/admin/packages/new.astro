@@ -8,6 +8,7 @@ import {
     generateTrackingNumber,
     STORE_OPTIONS,
 } from "../../../lib/utils";
+import { sendPackageStatusEmail } from "../../../lib/email";
 
 const staff = Astro.locals.staff!;
 
@@ -99,6 +100,15 @@ if (Astro.request.method === "POST") {
                             branch,
                         ],
                     });
+
+                    // Send email notification for warehouse arrival
+                    sendPackageStatusEmail({
+                        email: customer.email,
+                        name: customer.name || 'Customer',
+                        trackingNumber: mggTrackingNumber,
+                        originalTracking: originalTracking,
+                        newStatus: 'at_warehouse'
+                    }).catch(err => console.error('Failed to send status email:', err));
 
                     success = true;
                     createdTrackingNumber = mggTrackingNumber;

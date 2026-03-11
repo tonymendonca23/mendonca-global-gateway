@@ -20,10 +20,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    const { firstName, lastName, email, password, phone, address, city } = await request.json();
+    const { firstName, lastName, email, password, phone, city } = await request.json();
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !password || !phone || !address || !city) {
+    if (!firstName || !lastName || !email || !password || !phone || !city) {
       return new Response(JSON.stringify({
         success: false,
         error: 'All fields are required'
@@ -74,15 +74,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const warehouseAddress = generateWarehouseAddress(fullName, customerCode || null);
 
     await db.execute({
-      sql: `INSERT INTO users (id, email, password, name, phone, address, customer_code, branch_preference, us_warehouse_address, email_verified, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO users (id, email, password, name, phone, customer_code, branch_preference, us_warehouse_address, email_verified, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         userId,
         email.toLowerCase(),
         hashedPassword,
         fullName,
         phone,
-        address,
         customerCode || null,
         city.toLowerCase(),
         warehouseAddress,
@@ -95,7 +94,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const emailResult = await sendVerificationEmail(email.toLowerCase(), userId);
 
     if (!emailResult.success) {
-      ;
+      console.warn('⚠️ Warning:', emailResult.error);
       // Still return success but warn about email
       return new Response(JSON.stringify({
         success: true,
@@ -116,10 +115,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    ;
+    console.error('Registration error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'An error occurred during registration'
+      error: 'An error occurred during registration',
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

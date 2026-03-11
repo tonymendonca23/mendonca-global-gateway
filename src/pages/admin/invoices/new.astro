@@ -3,6 +3,8 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import AdminSidebar from "../../../components/admin/AdminSidebar.astro";
 import DashboardHeader from "../../../components/admin/DashboardHeader.astro";
 import db from "../../../lib/db";
+import { sendInvoiceEmail } from "../../../lib/email";
+import { createInvoiceFileLink } from "../../../lib/auth";
 import {
   generateInvoiceNumber,
   formatGYD,
@@ -63,6 +65,8 @@ if (Astro.request.method === "POST") {
         parseInt(formData.get("import_fee")?.toString() || "0", 10) || 0;
       const handlingFee =
         parseInt(formData.get("handling_fee")?.toString() || "0", 10) || 0;
+      const dutyFee =
+        parseInt(formData.get("duty_fee")?.toString() || "0", 10) || 0;
       const storageFee =
         parseInt(formData.get("storage_fee")?.toString() || "0", 10) || 0;
 
@@ -84,7 +88,7 @@ if (Astro.request.method === "POST") {
 
       shippingFee = Math.round(shippingFee);
 
-      const totalGyd = shippingFee + importFee + handlingFee + storageFee;
+      const totalGyd = shippingFee + importFee + handlingFee + dutyFee + storageFee;
 
       if (totalGyd <= 0) {
         error = "Please enter at least one charge amount";
@@ -140,6 +144,7 @@ if (Astro.request.method === "POST") {
               total_gyd,
               item_count,
               import_handling_duty,
+              duty_fee,
               weight_lbs,
               cost_per_lb,
               invoice_file_url,
@@ -150,7 +155,7 @@ if (Astro.request.method === "POST") {
               invoice_file_uploaded_at,
               status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid')
           `,
           args: [
             invoiceId,
@@ -163,6 +168,7 @@ if (Astro.request.method === "POST") {
             totalGyd,
             packageIds.length,
             handlingFee,
+            dutyFee,
             totalWeight,
             costPerLb,
             invoiceFileUrl,
@@ -185,6 +191,32 @@ if (Astro.request.method === "POST") {
           });
         }
 
+        // Send Email if file was uploaded
+        if (invoiceFileData) {
+          try {
+            const customerData = await db.execute({
+              sql: `SELECT email, name FROM users WHERE id = ?`,
+              args: [customerId]
+            });
+            const cust = customerData.rows[0] as any;
+            
+            if (cust && cust.email) {
+              const siteUrl = import.meta.env.PUBLIC_SITE_URL || "http://localhost:4321";
+              const fullUrl = createInvoiceFileLink(invoiceId, siteUrl);
+              
+              await sendInvoiceEmail({
+                email: cust.email,
+                name: cust.name,
+                invoiceNumber: createdInvoiceNumber,
+                totalGyd: totalGyd,
+                invoiceUrl: fullUrl
+              });
+            }
+          } catch(err) {
+            console.error('Invoice email failed to send:', err);
+          }
+        }
+
         success = true;
       }
     }
@@ -200,7 +232,7 @@ if (selectedCustomerId) {
   const packagesResult = await db.execute({
     sql: `
       SELECT * FROM packages 
-      WHERE customer_id = ? AND status = 'ready'
+      WHERE customer_id = ? AND status = 'ready' AND id NOT IN (SELECT package_id FROM invoice_line_items WHERE package_id IS NOT NULL)
       ORDER BY registered_at DESC
     `,
     args: [selectedCustomerId],
@@ -366,7 +398,7 @@ if (selectedCustomerId) {
                           for="import_fee"
                           class="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Import Fee
+                          Import Fee *
                         </label>
                         <input
                           type="number"
@@ -374,6 +406,8 @@ if (selectedCustomerId) {
                           name="import_fee"
                           min="0"
                           step="1"
+                          value="0"
+                          required
                           class="input w-full"
                           placeholder="e.g. 510"
                         />
@@ -383,7 +417,7 @@ if (selectedCustomerId) {
                           for="handling_fee"
                           class="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Handling Fee
+                          Handling Fee *
                         </label>
                         <input
                           type="number"
@@ -391,6 +425,27 @@ if (selectedCustomerId) {
                           name="handling_fee"
                           min="0"
                           step="1"
+                          value="0"
+                          required
+                          class="input w-full"
+                          placeholder="e.g. 510"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          for="duty_fee"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Duty Fee *
+                        </label>
+                        <input
+                          type="number"
+                          id="duty_fee"
+                          name="duty_fee"
+                          min="0"
+                          step="1"
+                          value="0"
+                          required
                           class="input w-full"
                           placeholder="e.g. 510"
                         />
