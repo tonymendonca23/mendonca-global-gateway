@@ -201,7 +201,7 @@ export async function sendVerificationEmail(
     const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
     const FROM_ADDRESS = import.meta.env.RESEND_FROM_EMAIL || 'Mendonca Global Gateway <no-reply@resend.mendoncagg.com>';
     const verificationUrl = `${baseUrl}/auth/verify-email?token=${token}`;
-    
+
     // As a senior developer practice: Log the URL in development for immediate access
     if (import.meta.env.DEV || import.meta.env.MODE === 'development' || baseUrl.includes('localhost')) {
       console.log('🔑 [Dev] Email Verification URL:', verificationUrl);

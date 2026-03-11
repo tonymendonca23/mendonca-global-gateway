@@ -46,7 +46,7 @@ if (Astro.request.method === "POST") {
         } else {
             // Ensure customer exists and get branch preference
             const customerResult = await db.execute({
-                sql: `SELECT id, name, branch_preference FROM users WHERE id = ?`,
+                sql: `SELECT id, name, email, branch_preference FROM users WHERE id = ?`,
                 args: [customerId],
             });
             const customer = customerResult.rows[0] as any;
@@ -104,11 +104,13 @@ if (Astro.request.method === "POST") {
                     // Send email notification for warehouse arrival
                     sendPackageStatusEmail({
                         email: customer.email,
-                        name: customer.name || 'Customer',
+                        name: customer.name || "Customer",
                         trackingNumber: mggTrackingNumber,
                         originalTracking: originalTracking,
-                        newStatus: 'at_warehouse'
-                    }).catch(err => console.error('Failed to send status email:', err));
+                        newStatus: "at_warehouse",
+                    }).catch((err) =>
+                        console.error("Failed to send status email:", err),
+                    );
 
                     success = true;
                     createdTrackingNumber = mggTrackingNumber;
@@ -117,7 +119,6 @@ if (Astro.request.method === "POST") {
             }
         }
     } catch (e) {
-        ;
         error = "Failed to create package. Please try again.";
     }
 }

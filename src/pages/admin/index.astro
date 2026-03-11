@@ -90,7 +90,9 @@ const statusConfig = [
 <BaseLayout title="Admin Dashboard">
   <div class="min-h-screen">
     <AdminSidebar />
-    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+    <main
+      class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300"
+    >
       <DashboardHeader
         title="Dashboard"
         userName={staff.name}
@@ -164,7 +166,10 @@ const statusConfig = [
                   View all →
                 </a>
               </div>
-              <PackageTable packages={recentPackages.rows as any[]} showEditBtn={false} />
+              <PackageTable
+                packages={recentPackages.rows as any[]}
+                showEditBtn={false}
+              />
             </div>
           </div>
 

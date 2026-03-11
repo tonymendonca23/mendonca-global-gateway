@@ -183,6 +183,22 @@
             />
           </div>
 
+          <!-- Address Field (Optional) -->
+          <div>
+            <label
+              for="address"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Delivery Address in Guyana (Optional)</label
+            >
+            <textarea
+              id="address"
+              name="address"
+              rows="2"
+              class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300 resize-none"
+              placeholder="Enter your street address if you'd like home delivery"
+            ></textarea>
+          </div>
+
           <!-- City Selection -->
           <div>
             <label
@@ -418,6 +434,7 @@
           email: formData.get("email"),
           password: password,
           phone: formData.get("phone"),
+          address: formData.get("address"),
           city: formData.get("city"),
         }),
       });
@@ -439,7 +456,6 @@
         }
       }
     } catch (error) {
-      ;
       showError("An error occurred. Please try again.");
       if (submitBtn) {
         submitBtn.removeAttribute("disabled");

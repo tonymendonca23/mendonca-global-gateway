@@ -250,7 +250,7 @@ export async function sendPackageStatusEmail({
 
     let statusHeader = '';
     let statusMessage = '';
-    
+
     switch (newStatus) {
       case 'at_warehouse':
         statusHeader = '📦 Package Arrived at US Warehouse';

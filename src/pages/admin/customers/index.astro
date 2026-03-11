@@ -14,7 +14,7 @@ const page = parseInt(url.searchParams.get('page') || '1');
 const perPage = 20;
 
 // Build query
-let countSql = `SELECT COUNT(*) as total FROM users`;
+let countSql = `SELECT COUNT(*) as total FROM users u`;
 let sql = `
   SELECT 
     u.*,

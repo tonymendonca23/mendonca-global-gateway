@@ -205,7 +205,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     if (['at_warehouse', 'in_transit', 'customs'].includes(status)) {
       // Import dynamically to avoid circular dependencies if any
       const { sendPackageStatusEmail } = await import('../../../../lib/email');
-      
+
       // Fire and forget email (don't block the request if email fails)
       sendPackageStatusEmail({
         email: currentPkg.customer_email,

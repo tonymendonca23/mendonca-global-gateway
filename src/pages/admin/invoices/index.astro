@@ -16,7 +16,7 @@ const page = parseInt(url.searchParams.get('page') || '1');
 const perPage = 20;
 
 // Build query
-let countSql = `SELECT COUNT(*) as total FROM invoices i`;
+let countSql = `SELECT COUNT(*) as total FROM invoices i LEFT JOIN users u ON i.customer_id = u.id`;
 let sql = `
   SELECT 
     i.*,

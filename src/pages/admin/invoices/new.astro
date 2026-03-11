@@ -88,7 +88,8 @@ if (Astro.request.method === "POST") {
 
       shippingFee = Math.round(shippingFee);
 
-      const totalGyd = shippingFee + importFee + handlingFee + dutyFee + storageFee;
+      const totalGyd =
+        shippingFee + importFee + handlingFee + dutyFee + storageFee;
 
       if (totalGyd <= 0) {
         error = "Please enter at least one charge amount";
@@ -196,24 +197,25 @@ if (Astro.request.method === "POST") {
           try {
             const customerData = await db.execute({
               sql: `SELECT email, name FROM users WHERE id = ?`,
-              args: [customerId]
+              args: [customerId],
             });
             const cust = customerData.rows[0] as any;
-            
+
             if (cust && cust.email) {
-              const siteUrl = import.meta.env.PUBLIC_SITE_URL || "http://localhost:4321";
+              const siteUrl =
+                import.meta.env.PUBLIC_SITE_URL || "http://localhost:4321";
               const fullUrl = createInvoiceFileLink(invoiceId, siteUrl);
-              
+
               await sendInvoiceEmail({
                 email: cust.email,
                 name: cust.name,
                 invoiceNumber: createdInvoiceNumber,
                 totalGyd: totalGyd,
-                invoiceUrl: fullUrl
+                invoiceUrl: fullUrl,
               });
             }
-          } catch(err) {
-            console.error('Invoice email failed to send:', err);
+          } catch (err) {
+            console.error("Invoice email failed to send:", err);
           }
         }
 
@@ -221,7 +223,6 @@ if (Astro.request.method === "POST") {
       }
     }
   } catch (e) {
-    ;
     error = "Failed to create invoice. Please try again.";
   }
 }
@@ -246,7 +247,9 @@ if (selectedCustomerId) {
     <AdminSidebar />
 
     <!-- Main Content -->
-    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+    <main
+      class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300"
+    >
       <DashboardHeader
         title="Create Invoice"
         subtitle="Generate a new invoice for a customer"
@@ -510,29 +513,37 @@ if (selectedCustomerId) {
 </BaseLayout>
 
 <script>
-  const sidebar = document.getElementById("customer-sidebar") || document.getElementById("admin-sidebar");
-  const backdrop = document.getElementById("customer-sidebar-backdrop") || document.getElementById("admin-sidebar-backdrop");
-  const toggleButtons = document.querySelectorAll("#customer-sidebar-toggle, #admin-sidebar-toggle");
+  const sidebar =
+    document.getElementById("customer-sidebar") ||
+    document.getElementById("admin-sidebar");
+  const backdrop =
+    document.getElementById("customer-sidebar-backdrop") ||
+    document.getElementById("admin-sidebar-backdrop");
+  const toggleButtons = document.querySelectorAll(
+    "#customer-sidebar-toggle, #admin-sidebar-toggle",
+  );
   const mainContent = document.querySelector("main");
 
   function toggleSidebar() {
-    const isHidden = (sidebar?.classList.contains("-translate-x-full") && window.innerWidth < 768) || 
-                     sidebar?.style.transform.includes('-100%');
-    
+    const isHidden =
+      (sidebar?.classList.contains("-translate-x-full") &&
+        window.innerWidth < 768) ||
+      sidebar?.style.transform.includes("-100%");
+
     if (isHidden) {
       sidebar?.classList.remove("-translate-x-full");
-      sidebar?.style.removeProperty('transform');
-      mainContent?.style.removeProperty('margin-left');
+      sidebar?.style.removeProperty("transform");
+      mainContent?.style.removeProperty("margin-left");
       backdrop?.classList.remove("hidden");
     } else {
       sidebar?.classList.add("-translate-x-full");
-      sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
-      mainContent?.style.setProperty('margin-left', '0', 'important');
+      sidebar?.style.setProperty("transform", "translateX(-100%)", "important");
+      mainContent?.style.setProperty("margin-left", "0", "important");
       backdrop?.classList.add("hidden");
     }
   }
 
-  toggleButtons.forEach(btn => btn.addEventListener("click", toggleSidebar));
+  toggleButtons.forEach((btn) => btn.addEventListener("click", toggleSidebar));
 
   if (backdrop) {
     backdrop.addEventListener("click", () => {
