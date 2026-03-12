@@ -252,7 +252,7 @@ const STATUS_OPTIONS = {
                                   method="POST"
                                   action={`/api/admin/invoices/${invoice.id}/mark-paid`}
                                   class="inline"
-                                  onsubmit="return confirm('Mark this invoice as paid?');"
+                                  data-confirm="Mark this invoice as paid?"
                                 >
                                   <button 
                                     type="submit"

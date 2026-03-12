@@ -36,7 +36,6 @@ if (Astro.request.method === "POST") {
             });
             successMessage = "Review approved and published.";
         } catch (e) {
-            ;
             errorMessage = "Failed to approve review. Please try again.";
         }
     } else if (action === "delete") {
@@ -47,7 +46,6 @@ if (Astro.request.method === "POST") {
             });
             successMessage = "Review deleted.";
         } catch (e) {
-            ;
             errorMessage = "Failed to delete review. Please try again.";
         }
     } else {
@@ -472,7 +470,7 @@ const approvedCount = approvedReviews.length;
                                                             <form
                                                                 method="POST"
                                                                 class="inline ml-2"
-                                                                onsubmit="return confirm('Delete this review? This cannot be undone.')"
+                                                                data-confirm="Delete this review? This cannot be undone."
                                                             >
                                                                 <input
                                                                     type="hidden"

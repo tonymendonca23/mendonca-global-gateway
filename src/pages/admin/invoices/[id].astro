@@ -136,7 +136,6 @@ if (Astro.request.method === "POST") {
             }
         }
     } catch (e) {
-        ;
         errorMessage = "Failed to upload invoice PDF. Please try again.";
     }
 }
@@ -146,7 +145,9 @@ if (Astro.request.method === "POST") {
     <div class="min-h-screen">
         <AdminSidebar />
 
-        <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+        <main
+            class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300"
+        >
             <DashboardHeader
                 title={`Invoice ${invoice.invoice_number}`}
                 subtitle="Review charges and linked packages"
@@ -411,6 +412,12 @@ if (Astro.request.method === "POST") {
                                                 invoice.subtotal_storage || 0,
                                             )
                                         }
+                                    </dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Duty Fee</dt>
+                                    <dd class="font-medium">
+                                        {formatGYD(invoice.duty_fee || 0)}
                                     </dd>
                                 </div>
                                 <hr class="my-3" />
