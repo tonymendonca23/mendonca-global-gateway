@@ -214,6 +214,18 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     }
 
     // Update package
+    // First, determine the received_at value based on status change
+    let receivedAtValue: number | null = currentPkg.received_at;
+    const oldStatus = currentPkg.status;
+
+    if (oldStatus !== 'at_warehouse' && status === 'at_warehouse') {
+      // Package is arriving at warehouse - set received_at to now
+      receivedAtValue = Math.floor(Date.now() / 1000);
+    } else if (oldStatus === 'at_warehouse' && status !== 'at_warehouse') {
+      // Package is leaving warehouse - clear received_at
+      receivedAtValue = null;
+    }
+
     await db.execute({
       sql: `
         UPDATE packages 
@@ -224,11 +236,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           duty_usd = ?,
           notes = ?,
           status_updated_at = strftime('%s', 'now'),
-          received_at = CASE 
-            WHEN status = 'at_warehouse' AND ? != 'at_warehouse' THEN NULL
-            WHEN ? = 'at_warehouse' AND status != 'at_warehouse' THEN strftime('%s', 'now')
-            ELSE received_at
-          END
+          received_at = ?
         WHERE id = ?
       `,
       args: [
@@ -237,8 +245,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
         valueUsd ? parseFloat(valueUsd) : null,
         dutyUsd ? parseFloat(dutyUsd) : null,
         notes || null,
-        status,
-        status,
+        receivedAtValue,
         packageId,
       ],
     });
