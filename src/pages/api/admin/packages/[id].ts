@@ -226,6 +226,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       receivedAtValue = null;
     }
 
+    // Calculate status_updated_at timestamp in JavaScript for better compatibility
+    const statusUpdatedAt = Math.floor(Date.now() / 1000);
+
     await db.execute({
       sql: `
         UPDATE packages 
@@ -235,7 +238,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
           value_usd = ?,
           duty_usd = ?,
           notes = ?,
-          status_updated_at = strftime('%s', 'now'),
+          status_updated_at = ?,
           received_at = ?
         WHERE id = ?
       `,
@@ -245,6 +248,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
         valueUsd ? parseFloat(valueUsd) : null,
         dutyUsd ? parseFloat(dutyUsd) : null,
         notes || null,
+        statusUpdatedAt,
         receivedAtValue,
         packageId,
       ],
