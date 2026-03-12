@@ -151,90 +151,158 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     return new Response('Package ID required', { status: 400 });
   }
 
-  const formData = await request.formData();
-  const status = formData.get('status')?.toString() || 'at_warehouse';
-  const weightLbs = formData.get('weight_lbs')?.toString();
-  const valueUsd = formData.get('value_usd')?.toString();
-  const dutyUsd = formData.get('duty_usd')?.toString();
-  const notes = formData.get('notes')?.toString();
+  try {
+    const formData = await request.formData();
+    const status = formData.get('status')?.toString() || 'at_warehouse';
+    const weightLbs = formData.get('weight_lbs')?.toString();
+    const valueUsd = formData.get('value_usd')?.toString();
+    const dutyUsd = formData.get('duty_usd')?.toString();
+    const notes = formData.get('notes')?.toString();
 
-  // Get current package to check if status changed and get customer email
-  const currentPkgResult = await db.execute({
-    sql: `
-      SELECT p.*, u.email as customer_email, u.name as customer_name
-      FROM packages p
-      LEFT JOIN users u ON p.customer_id = u.id
-      WHERE p.id = ?
-    `,
-    args: [packageId]
-  });
-  const currentPkg = currentPkgResult.rows[0] as any;
-
-  // Update package
-  await db.execute({
-    sql: `
-      UPDATE packages 
-      SET 
-        status = ?,
-        weight_lbs = ?,
-        value_usd = ?,
-        duty_usd = ?,
-        notes = ?,
-        status_updated_at = strftime('%s', 'now'),
-        received_at = CASE 
-          WHEN status = 'at_warehouse' AND ? != 'at_warehouse' THEN NULL
-          WHEN ? = 'at_warehouse' AND status != 'at_warehouse' THEN strftime('%s', 'now')
-          ELSE received_at
-        END
-      WHERE id = ?
-    `,
-    args: [
-      status,
-      weightLbs ? parseFloat(weightLbs) : null,
-      valueUsd ? parseFloat(valueUsd) : null,
-      dutyUsd ? parseFloat(dutyUsd) : null,
-      notes || null,
-      status,
-      status,
-      packageId,
-    ],
-  });
-
-  // Check if we need to send a status update email
-  if (currentPkg && currentPkg.status !== status && currentPkg.customer_email) {
-    if (['at_warehouse', 'in_transit', 'customs'].includes(status)) {
-      // Import dynamically to avoid circular dependencies if any
-      const { sendPackageStatusEmail } = await import('../../../../lib/email');
-
-      // Fire and forget email (don't block the request if email fails)
-      sendPackageStatusEmail({
-        email: currentPkg.customer_email,
-        name: currentPkg.customer_name || 'Customer',
-        trackingNumber: currentPkg.mgg_tracking_number,
-        originalTracking: currentPkg.original_tracking_number,
-        newStatus: status
-      }).catch(err => console.error('Failed to send status email:', err));
+    // Validate status
+    const validStatuses = ['at_warehouse', 'in_transit', 'customs', 'ready', 'picked_up'];
+    if (!validStatuses.includes(status)) {
+      const errorHtml = `
+        <div class="p-6">
+          <div class="text-5xl mb-4 text-center">❌</div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2 text-center">Invalid Status</h3>
+          <p class="text-gray-500 mb-4 text-center">The selected status is not valid.</p>
+          <button 
+            onclick="document.getElementById('modal').classList.add('hidden')"
+            class="btn-secondary w-full"
+          >
+            Close
+          </button>
+        </div>
+      `;
+      return new Response(errorHtml, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html' },
+      });
     }
+
+    // Get current package to check if status changed and get customer email
+    const currentPkgResult = await db.execute({
+      sql: `
+        SELECT p.*, u.email as customer_email, u.name as customer_name
+        FROM packages p
+        LEFT JOIN users u ON p.customer_id = u.id
+        WHERE p.id = ?
+      `,
+      args: [packageId]
+    });
+    const currentPkg = currentPkgResult.rows[0] as any;
+
+    if (!currentPkg) {
+      const errorHtml = `
+        <div class="p-6">
+          <div class="text-5xl mb-4 text-center">❌</div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2 text-center">Package Not Found</h3>
+          <p class="text-gray-500 mb-4 text-center">The package you're trying to update doesn't exist.</p>
+          <button 
+            onclick="document.getElementById('modal').classList.add('hidden')"
+            class="btn-secondary w-full"
+          >
+            Close
+          </button>
+        </div>
+      `;
+      return new Response(errorHtml, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Update package
+    await db.execute({
+      sql: `
+        UPDATE packages 
+        SET 
+          status = ?,
+          weight_lbs = ?,
+          value_usd = ?,
+          duty_usd = ?,
+          notes = ?,
+          status_updated_at = strftime('%s', 'now'),
+          received_at = CASE 
+            WHEN status = 'at_warehouse' AND ? != 'at_warehouse' THEN NULL
+            WHEN ? = 'at_warehouse' AND status != 'at_warehouse' THEN strftime('%s', 'now')
+            ELSE received_at
+          END
+        WHERE id = ?
+      `,
+      args: [
+        status,
+        weightLbs ? parseFloat(weightLbs) : null,
+        valueUsd ? parseFloat(valueUsd) : null,
+        dutyUsd ? parseFloat(dutyUsd) : null,
+        notes || null,
+        status,
+        status,
+        packageId,
+      ],
+    });
+
+    // Check if we need to send a status update email
+    if (currentPkg && currentPkg.status !== status && currentPkg.customer_email) {
+      if (['at_warehouse', 'in_transit', 'customs'].includes(status)) {
+        // Import dynamically to avoid circular dependencies if any
+        const { sendPackageStatusEmail } = await import('../../../../lib/email');
+
+        // Fire and forget email (don't block the request if email fails)
+        sendPackageStatusEmail({
+          email: currentPkg.customer_email,
+          name: currentPkg.customer_name || 'Customer',
+          trackingNumber: currentPkg.mgg_tracking_number,
+          originalTracking: currentPkg.original_tracking_number,
+          newStatus: status
+        }).catch(err => console.error('Failed to send status email:', err));
+      }
+    }
+
+    // Return success message
+    const html = `
+      <div class="p-6 text-center">
+        <div class="text-5xl mb-4">✅</div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Package Updated</h3>
+        <p class="text-gray-500 mb-4">The package has been updated successfully.</p>
+        <button 
+          onclick="location.reload()"
+          class="btn-primary"
+        >
+          Close & Refresh
+        </button>
+      </div>
+    `;
+
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html' },
+    });
+  } catch (error) {
+    console.error('Error updating package:', error);
+
+    const errorHtml = `
+      <div class="p-6">
+        <div class="text-5xl mb-4 text-center">❌</div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2 text-center">Update Failed</h3>
+        <p class="text-gray-500 mb-4 text-center">There was an error updating the package. Please try again.</p>
+        <div class="text-xs text-gray-400 mb-4 text-center">
+          Error: ${error instanceof Error ? error.message : 'Unknown error'}
+        </div>
+        <button 
+          onclick="document.getElementById('modal').classList.add('hidden')"
+          class="btn-secondary w-full"
+        >
+          Close
+        </button>
+      </div>
+    `;
+
+    return new Response(errorHtml, {
+      status: 500,
+      headers: { 'Content-Type': 'text/html' },
+    });
   }
-
-  // Return success message
-  const html = `
-    <div class="p-6 text-center">
-      <div class="text-5xl mb-4">✅</div>
-      <h3 class="text-xl font-bold text-gray-900 mb-2">Package Updated</h3>
-      <p class="text-gray-500 mb-4">The package has been updated successfully.</p>
-      <button 
-        onclick="location.reload()"
-        class="btn-primary"
-      >
-        Close & Refresh
-      </button>
-    </div>
-  `;
-
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html' },
-  });
 };
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
