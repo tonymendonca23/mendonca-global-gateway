@@ -34,62 +34,90 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Check if user already exists
-    const existingUser = await db.execute({
-      sql: 'SELECT id FROM users WHERE email = ?',
+    const existingUserResult = await db.execute({
+      sql: 'SELECT id, email_verified, customer_code FROM users WHERE email = ?',
       args: [email.toLowerCase()],
     });
 
-    if (existingUser.rows.length > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'An account with this email already exists. Please log in.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    let userId = nanoid();
+    let customerCode = '';
+    const isUnverifiedOverwrite = existingUserResult.rows.length > 0 && existingUserResult.rows[0].email_verified === 0;
+
+    if (existingUserResult.rows.length > 0) {
+      if (existingUserResult.rows[0].email_verified === 1) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'An account with this email already exists. Please log in.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else {
+        // Prepare to overwrite the unverified profile
+        userId = existingUserResult.rows[0].id as string;
+        customerCode = (existingUserResult.rows[0].customer_code as string) || '';
+      }
     }
 
     // Hash password
     const hashedPassword = await hashPassword(password);
-
-    // Create user
-    const userId = nanoid();
     const now = Math.floor(Date.now() / 1000);
 
-    // Generate unique customer code like MGG123456
-    let customerCode = '';
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const candidate = `MGG${Math.floor(100000 + Math.random() * 900000)}`;
-      const codeCheck = await db.execute({
-        sql: 'SELECT id FROM users WHERE customer_code = ?',
-        args: [candidate],
-      });
-      if (codeCheck.rows.length === 0) {
-        customerCode = candidate;
-        break;
+    // Generate unique customer code like MGG123456 if we don't hold one
+    if (!customerCode) {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = `MGG${Math.floor(100000 + Math.random() * 900000)}`;
+        const codeCheck = await db.execute({
+          sql: 'SELECT id FROM users WHERE customer_code = ?',
+          args: [candidate],
+        });
+        if (codeCheck.rows.length === 0) {
+          customerCode = candidate;
+          break;
+        }
       }
     }
 
     const fullName = `${firstName} ${lastName}`.trim();
     const warehouseAddress = generateWarehouseAddress(fullName, customerCode || null);
 
-    await db.execute({
-      sql: `INSERT INTO users (id, email, password, name, phone, address, customer_code, branch_preference, us_warehouse_address, email_verified, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        userId,
-        email.toLowerCase(),
-        hashedPassword,
-        fullName,
-        phone,
-        address || null,
-        customerCode || null,
-        city.toLowerCase(),
-        warehouseAddress,
-        0, // email_verified = false
-        now,
-      ],
-    });
+    if (isUnverifiedOverwrite) {
+      // Overwrite the existing unverified user with the newly submitted details
+      await db.execute({
+        sql: `UPDATE users 
+              SET password = ?, name = ?, phone = ?, address = ?, branch_preference = ?, us_warehouse_address = ?, created_at = ?
+              WHERE id = ?`,
+        args: [
+          hashedPassword,
+          fullName,
+          phone,
+          address || null,
+          city.toLowerCase(),
+          warehouseAddress,
+          now,
+          userId,
+        ],
+      });
+    } else {
+      // Create new user completely
+      await db.execute({
+        sql: `INSERT INTO users (id, email, password, name, phone, address, customer_code, branch_preference, us_warehouse_address, email_verified, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          userId,
+          email.toLowerCase(),
+          hashedPassword,
+          fullName,
+          phone,
+          address || null,
+          customerCode || null,
+          city.toLowerCase(),
+          warehouseAddress,
+          0, // email_verified = false
+          now,
+        ],
+      });
+    }
 
     // Send verification email
     const emailResult = await sendVerificationEmail(email.toLowerCase(), userId);
