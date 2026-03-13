@@ -64,6 +64,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select name="status" class="input w-full" required>
+          <option value="registered" ${pkg.status === 'registered' ? 'selected' : ''}>📝 Expected / Registered</option>
             <option value="at_warehouse" ${pkg.status === 'at_warehouse' ? 'selected' : ''}>📦 At US Warehouse</option>
             <option value="in_transit" ${pkg.status === 'in_transit' ? 'selected' : ''}>✈️ In Transit</option>
             <option value="customs" ${pkg.status === 'customs' ? 'selected' : ''}>📋 Customs Clearance</option>
@@ -160,7 +161,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     const notes = formData.get('notes')?.toString();
 
     // Validate status
-    const validStatuses = ['at_warehouse', 'in_transit', 'customs', 'ready', 'picked_up'];
+    const validStatuses = ['registered', 'at_warehouse', 'in_transit', 'customs', 'ready', 'picked_up'];
     if (!validStatuses.includes(status)) {
       const errorHtml = `
         <div class="p-6">

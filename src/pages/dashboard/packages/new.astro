@@ -1,8 +1,87 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { STORE_OPTIONS } from "../../../lib/utils";
+import {
+  STORE_OPTIONS,
+  generateTrackingNumber,
+  generateId,
+} from "../../../lib/utils";
+import db from "../../../lib/db";
 
 const user = Astro.locals.user!;
+let error = "";
+let success = false;
+let createdTrackingNumber = "";
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+
+    const storeName = formData.get("store_name")?.toString().trim();
+    const originalTracking = formData
+      .get("original_tracking_number")
+      ?.toString()
+      .trim();
+    const description = formData.get("description")?.toString().trim() || null;
+
+    if (!storeName || !originalTracking) {
+      error = "Store name and tracking number are required";
+    } else {
+      // Check for duplicate tracking number globally
+      const duplicateCheck = await db.execute({
+        sql: `SELECT id FROM packages WHERE original_tracking_number = ?`,
+        args: [originalTracking],
+      });
+
+      if (duplicateCheck.rows.length > 0) {
+        error = "This tracking number has already been registered.";
+      } else {
+        // Generate unique MGG tracking number
+        let mggTrackingNumber = generateTrackingNumber();
+        let attempts = 0;
+        while (attempts < 10) {
+          const check = await db.execute({
+            sql: `SELECT id FROM packages WHERE mgg_tracking_number = ?`,
+            args: [mggTrackingNumber],
+          });
+          if (check.rows.length === 0) break;
+          mggTrackingNumber = generateTrackingNumber();
+          attempts++;
+        }
+
+        // Insert into packages with 'registered' status (Pre-alert)
+        const packageId = generateId();
+        await db.execute({
+          sql: `
+                        INSERT INTO packages (
+                            id, 
+                            mgg_tracking_number, 
+                            original_tracking_number, 
+                            customer_id, 
+                            store_name, 
+                            description, 
+                            status, 
+                            registered_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, 'registered', unixepoch())
+                    `,
+          args: [
+            packageId,
+            mggTrackingNumber,
+            originalTracking,
+            user.id,
+            storeName,
+            description,
+          ],
+        });
+
+        success = true;
+        createdTrackingNumber = originalTracking;
+      }
+    }
+  } catch (e) {
+    console.error("Error creating expected package", e);
+    error = "Failed to register package. Please try again or contact support.";
+  }
+}
 ---
 
 <BaseLayout title="Register Package">
@@ -21,22 +100,13 @@ const user = Astro.locals.user!;
       <div class="p-4">
         <a href="/" class="flex items-center gap-3 mb-8">
           <div
-            class="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center"
+            class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm"
           >
-            <svg
-              class="w-5 h-5 text-white"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="3" y="7" width="13" height="10" rx="2" ry="2"></rect>
-              <path d="M16 11h3l2 3v3h-5"></path>
-              <circle cx="7.5" cy="18" r="1.5"></circle>
-              <circle cx="18.5" cy="18" r="1.5"></circle>
-            </svg>
+            <img
+              src="/logo.svg"
+              alt="Mendonca Global Gateway Logo"
+              class="h-8 w-auto"
+            />
           </div>
           <span class="text-lg font-heading font-bold tracking-tight">MGG</span>
         </a>
@@ -55,11 +125,14 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                ><rect x="3" y="4" width="4" height="16" rx="1"></rect><rect
+                  x="10"
+                  y="9"
+                  width="4"
+                  height="11"
+                  rx="1"></rect><rect x="17" y="13" width="4" height="7" rx="1"
+                ></rect></svg
               >
-                <rect x="3" y="4" width="4" height="16" rx="1"></rect>
-                <rect x="10" y="9" width="4" height="11" rx="1"></rect>
-                <rect x="17" y="13" width="4" height="7" rx="1"></rect>
-              </svg>
             </span>
             <span>Dashboard</span>
           </a>
@@ -76,11 +149,10 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                ><path d="M3 7l9-4 9 4"></path><path
+                  d="M4 8h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"></path><path
+                  d="M12 3v6"></path></svg
               >
-                <path d="M3 7l9-4 9 4"></path>
-                <path d="M4 8h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"></path>
-                <path d="M12 3v6"></path>
-              </svg>
             </span>
             <span>My Packages</span>
           </a>
@@ -97,11 +169,9 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                ><circle cx="12" cy="12" r="8"></circle><path d="M12 9v6"
+                ></path><path d="M9 12h6"></path></svg
               >
-                <circle cx="12" cy="12" r="8"></circle>
-                <path d="M12 9v6"></path>
-                <path d="M9 12h6"></path>
-              </svg>
             </span>
             <span>Register Package</span>
           </a>
@@ -118,13 +188,10 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-              >
-                <path
+                ><path
                   d="M7 3h10l2 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"
-                ></path>
-                <path d="M9 12h6"></path>
-                <path d="M9 16h4"></path>
-              </svg>
+                ></path><path d="M9 12h6"></path><path d="M9 16h4"></path></svg
+              >
             </span>
             <span>Invoices</span>
           </a>
@@ -141,10 +208,9 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                ><circle cx="12" cy="8" r="3"></circle><path
+                  d="M6 19a6 6 0 0 1 12 0"></path></svg
               >
-                <circle cx="12" cy="8" r="3"></circle>
-                <path d="M6 19a6 6 0 0 1 12 0"></path>
-              </svg>
             </span>
             <span>Profile</span>
           </a>
@@ -161,11 +227,10 @@ const user = Astro.locals.user!;
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-              >
-                <path
+                ><path
                   d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-                ></path>
-              </svg>
+                ></path></svg
+              >
             </span>
             <span>Comments</span>
           </a>
@@ -186,11 +251,9 @@ const user = Astro.locals.user!;
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
+              ><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path><path
+                d="M4 4h7v16H4z"></path></svg
             >
-              <path d="M16 17l5-5-5-5"></path>
-              <path d="M21 12H9"></path>
-              <path d="M4 4h7v16H4z"></path>
-            </svg>
           </span>
           <span>Logout</span>
         </a>
@@ -224,10 +287,10 @@ const user = Astro.locals.user!;
             </button>
             <div>
               <h1 class="text-2xl font-heading font-bold text-primary">
-                Register New Package
+                Register Expected Package
               </h1>
               <p class="text-sm text-gray-500">
-                Package registration is handled by the MGG team
+                Let us know what's coming so we process it faster
               </p>
             </div>
           </div>
@@ -238,98 +301,188 @@ const user = Astro.locals.user!;
       </header>
 
       <!-- Form -->
-      <div class="p-6">
-        <div class="max-w-2xl">
-          <div class="card">
-            <div class="space-y-4">
-              <h2 class="text-lg font-semibold text-gray-900">
-                Package registration is managed by Mendonça Global Gateway
-              </h2>
-              <p class="text-sm text-gray-600">
-                You no longer need to register packages yourself. Our team will
-                add packages to your account when they arrive at the warehouse
-                using your tracking number and MMG customer code.
-              </p>
-              <p class="text-sm text-gray-600">
-                If you have a new tracking number you want us to watch, please
-                send it to us via WhatsApp or email and we will take care of the
-                rest.
-              </p>
-              <div class="flex flex-wrap gap-3 pt-2">
-                <a href="/dashboard/packages" class="btn-primary">
-                  View My Packages
-                </a>
-                <a href="/dashboard" class="btn-secondary">
-                  ← Back to Dashboard
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Your US Address -->
-          <div class="card mt-6">
-            <h3 class="font-semibold text-primary mb-3">
-              📍 Your US Warehouse Address
-            </h3>
-            <div
-              class="bg-gray-50 rounded-lg p-4 font-mono text-sm whitespace-pre-line"
-            >
-              {user.us_warehouse_address}
-            </div>
-            <p class="text-xs text-gray-500 mt-3">
-              Use this address when checking out from US online stores.
-            </p>
-          </div>
-
-          <!-- WhatsApp Help -->
-          <div class="card mt-6 bg-green-50 border-green-200">
-            <div class="flex items-center gap-4">
-              <div class="text-4xl">💬</div>
-              <div>
-                <p class="font-medium text-green-800">Need Help?</p>
-                <p class="text-sm text-green-600 mb-2">
-                  WhatsApp us your tracking number and we'll keep an eye out for
-                  your package!
-                </p>
-                <a
-                  href="https://wa.me/592XXXXXXXX"
-                  class="text-sm text-green-700 hover:underline font-medium"
+      <div class="p-4 md:p-6 max-w-2xl mx-auto">
+        {
+          success ? (
+            <div class="bg-white rounded-lg shadow-sm p-8 text-center mt-8 border border-gray-200">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-6">
+                <svg
+                  class="w-8 h-8"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  → WhatsApp Support
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                Package Successfully Submitted!
+              </h3>
+              <p class="text-gray-500 mb-6">
+                Tracking Number{" "}
+                <span class="font-mono font-medium text-gray-900">
+                  {createdTrackingNumber}
+                </span>{" "}
+                is now recorded.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/dashboard/packages" class="btn-primary">
+                  View Packages
+                </a>
+                <a
+                  href="/dashboard/packages/new"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white font-medium transition"
+                >
+                  Add Another
                 </a>
               </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div class="space-y-6 mt-4">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800 text-sm">
+                <p class="font-semibold mb-1 flex items-center gap-2">
+                  <span class="text-lg">💡</span> Why pre-register?
+                </p>
+                <p>
+                  Entering your tracking number here connects your package to
+                  your account instantly when it hits our US warehouse, avoiding
+                  delays.
+                </p>
+              </div>
+
+              <form
+                method="POST"
+                class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div class="p-6 space-y-6">
+                  {error && (
+                    <div class="p-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                      {error}
+                    </div>
+                  )}
+
+                  <div>
+                    <label
+                      for="store_name"
+                      class="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Store / Retailer *
+                    </label>
+                    <select
+                      id="store_name"
+                      name="store_name"
+                      class="input w-full"
+                      required
+                    >
+                      <option value="">Select a store...</option>
+                      {STORE_OPTIONS.map((store) => (
+                        <option value={store}>{store}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      for="original_tracking_number"
+                      class="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Original Tracking Number *
+                    </label>
+                    <input
+                      type="text"
+                      id="original_tracking_number"
+                      name="original_tracking_number"
+                      required
+                      class="input w-full font-mono"
+                      placeholder="e.g. TBA1234567890"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">
+                      The carrier tracking number (Amazon, FedEx, USPS, etc.)
+                      provided in your shipping email
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="description"
+                      class="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Package Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="description"
+                      name="description"
+                      class="input w-full"
+                      placeholder="e.g. 2 pairs of shoes, gym equipment"
+                    />
+                  </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+                  <button type="submit" class="btn-primary">
+                    Submit Tracking
+                  </button>
+                </div>
+              </form>
+
+              <div class="card mt-8">
+                <h3 class="font-semibold text-primary mb-3">
+                  📍 Your US Warehouse Address
+                </h3>
+                <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm whitespace-pre-line">
+                  {user.us_warehouse_address}
+                </div>
+                <p class="text-xs text-gray-500 mt-3">
+                  Use this address when checking out from US online stores.
+                </p>
+              </div>
+            </div>
+          )
+        }
       </div>
     </main>
   </div>
 </BaseLayout>
 
 <script>
-  const sidebar = document.getElementById("customer-sidebar") || document.getElementById("admin-sidebar");
-  const backdrop = document.getElementById("customer-sidebar-backdrop") || document.getElementById("admin-sidebar-backdrop");
-  const toggleButtons = document.querySelectorAll("#customer-sidebar-toggle, #admin-sidebar-toggle");
+  const sidebar =
+    document.getElementById("customer-sidebar") ||
+    document.getElementById("admin-sidebar");
+  const backdrop =
+    document.getElementById("customer-sidebar-backdrop") ||
+    document.getElementById("admin-sidebar-backdrop");
+  const toggleButtons = document.querySelectorAll(
+    "#customer-sidebar-toggle, #admin-sidebar-toggle",
+  );
   const mainContent = document.querySelector("main");
 
   function toggleSidebar() {
-    const isHidden = (sidebar?.classList.contains("-translate-x-full") && window.innerWidth < 768) || 
-                     sidebar?.style.transform.includes('-100%');
-    
+    const isHidden =
+      (sidebar?.classList.contains("-translate-x-full") &&
+        window.innerWidth < 768) ||
+      sidebar?.style.transform.includes("-100%");
+
     if (isHidden) {
       sidebar?.classList.remove("-translate-x-full");
-      sidebar?.style.removeProperty('transform');
-      mainContent?.style.removeProperty('margin-left');
+      sidebar?.style.removeProperty("transform");
+      mainContent?.style.removeProperty("margin-left");
       backdrop?.classList.remove("hidden");
     } else {
       sidebar?.classList.add("-translate-x-full");
-      sidebar?.style.setProperty('transform', 'translateX(-100%)', 'important');
-      mainContent?.style.setProperty('margin-left', '0', 'important');
+      sidebar?.style.setProperty("transform", "translateX(-100%)", "important");
+      mainContent?.style.setProperty("margin-left", "0", "important");
       backdrop?.classList.add("hidden");
     }
   }
 
-  toggleButtons.forEach(btn => btn.addEventListener("click", toggleSidebar));
+  toggleButtons.forEach((btn) => btn.addEventListener("click", toggleSidebar));
 
   if (backdrop) {
     backdrop.addEventListener("click", () => {

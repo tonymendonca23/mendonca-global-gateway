@@ -81,6 +81,7 @@ export function formatDateTime(timestamp: number): string {
 
 // Package status labels
 export const PACKAGE_STATUS_LABELS = {
+  registered: { label: 'Registered', icon: '📝', color: 'blue' },
   at_warehouse: { label: 'At US Warehouse', icon: '📦', color: 'yellow' },
   in_transit: { label: 'In Transit', icon: '✈️', color: 'orange' },
   customs: { label: 'Customs Clearance', icon: '📋', color: 'purple' },
@@ -90,6 +91,7 @@ export const PACKAGE_STATUS_LABELS = {
 
 // Status color mapping (hex colors for badges)
 export const STATUS_COLORS: Record<string, string> = {
+  registered: '#3b82f6',
   at_warehouse: '#eab308',
   in_transit: '#f59e0b',
   customs: '#8b5cf6',
