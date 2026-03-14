@@ -58,7 +58,7 @@ export const GET: APIRoute = async ({ params }) => {
       statusTimeline.at_warehouse = {
         label: 'At US Warehouse',
         date: formatDate(pkg.received_at),
-        location: 'Miami, FL'
+        location: 'New York, NY'
       };
     }
 

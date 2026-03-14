@@ -254,7 +254,7 @@ export async function sendPackageStatusEmail({
     switch (newStatus) {
       case 'at_warehouse':
         statusHeader = '📦 Package Arrived at US Warehouse';
-        statusMessage = `Great news! Your package (Tracking: <strong>${displayTracking}</strong>) has successfully arrived at our US Warehouse in Miami. It is currently being processed and will be prepared for flight to Guyana soon.`;
+        statusMessage = `Great news! Your package (Tracking: <strong>${displayTracking}</strong>) has successfully arrived at our US Warehouse in New York. It is currently being processed and will be prepared for flight to Guyana soon.`;
         break;
       case 'in_transit':
         statusHeader = '✈️ Package is in Transit';

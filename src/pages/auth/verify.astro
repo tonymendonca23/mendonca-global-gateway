@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     // Auto-create new customers
     if (!isStaff) {
       userId = nanoid();
-      const warehouseAddress = generateWarehouseAddress();
+      const warehouseAddress = generateWarehouseAddress(email.split('@')[0]);
       
       await db.execute({
         sql: `INSERT INTO users (id, email, name, us_warehouse_address) VALUES (?, ?, ?, ?)`,
@@ -58,7 +58,13 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   return redirect(dashboardPath, 302);
 };
 
-function generateWarehouseAddress(): string {
-  const id = nanoid(6).toUpperCase();
-  return `MGG-${id}\n1234 NW 72nd Ave\nMiami, FL 33166\nUSA`;
+function generateWarehouseAddress(name: string): string {
+  const lines: string[] = [];
+  lines.push(`Name: ${name || ''} MGG`);
+  lines.push('address line 1: 146-19 228th street');
+  lines.push('city: Springfield Gardens');
+  lines.push('State: New York');
+  lines.push('Zip code: 11413');
+  lines.push('Phone: (917) 660-6872');
+  return lines.join('\n');
 }
