@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           INSERT INTO packages (
             id, customer_id, store_name, description, 
             status, mgg_tracking_number, original_tracking_number, 
-            weight, branch, registered_at
+            weight_lbs, branch, registered_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
         `,
                 args: [
