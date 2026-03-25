@@ -1,27 +1,33 @@
 ---
-import type { APIRoute } from 'astro';
-import { verifyMagicLink, createSession, setSessionCookie, getSessionToken, validateSession } from '../../lib/auth';
-import db from '../../lib/db';
-import { nanoid } from 'nanoid';
+import type { APIRoute } from "astro";
+import {
+  verifyMagicLink,
+  createSession,
+  setSessionCookie,
+  getSessionToken,
+  validateSession,
+} from "../../lib/auth";
+import db from "../../lib/db";
+import { nanoid } from "nanoid";
 
 export const GET: APIRoute = async ({ url, cookies, redirect }) => {
-  const token = url.searchParams.get('token');
+  const token = url.searchParams.get("token");
 
   if (!token) {
-    return redirect('/auth/login?error=invalid_token', 302);
+    return redirect("/auth/login?error=invalid_token", 302);
   }
 
   // Verify the magic link
   const result = await verifyMagicLink(token);
 
   if (!result.success || !result.email) {
-    return redirect('/auth/login?error=invalid_or_expired', 302);
+    return redirect("/auth/login?error=invalid_or_expired", 302);
   }
 
   const { email, isStaff } = result;
 
   // Check if user exists
-  const table = isStaff ? 'staff' : 'users';
+  const table = isStaff ? "staff" : "users";
   const existingUser = await db.execute({
     sql: `SELECT id FROM ${table} WHERE email = ?`,
     args: [email],
@@ -33,15 +39,15 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     // Auto-create new customers
     if (!isStaff) {
       userId = nanoid();
-      const warehouseAddress = generateWarehouseAddress(email.split('@')[0]);
-      
+      const warehouseAddress = generateWarehouseAddress(email.split("@")[0]);
+
       await db.execute({
         sql: `INSERT INTO users (id, email, name, us_warehouse_address) VALUES (?, ?, ?, ?)`,
-        args: [userId, email, email.split('@')[0], warehouseAddress],
+        args: [userId, email, email.split("@")[0], warehouseAddress],
       });
     } else {
       // Staff must be created manually
-      return redirect('/admin/login?error=not_authorized', 302);
+      return redirect("/admin/login?error=not_authorized", 302);
     }
   } else {
     userId = existingUser.rows[0].id as string;
@@ -54,17 +60,18 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   setSessionCookie(cookies, sessionToken, isStaff || false);
 
   // Redirect to dashboard
-  const dashboardPath = isStaff ? '/admin' : '/dashboard';
+  const dashboardPath = isStaff ? "/admin" : "/dashboard";
   return redirect(dashboardPath, 302);
 };
 
 function generateWarehouseAddress(name: string): string {
   const lines: string[] = [];
-  lines.push(`Name: ${name || ''} MGG`);
-  lines.push('address line 1: 146-19 228th street');
-  lines.push('city: Springfield Gardens');
-  lines.push('State: New York');
-  lines.push('Zip code: 11413');
-  lines.push('Phone: (917) 660-6872');
-  return lines.join('\n');
+  lines.push(`Name: ${name || ""} MGG`);
+  lines.push("address line 1: 146-19 228th street");
+  lines.push("city: Springfield Gardens");
+  lines.push("State: New York");
+  lines.push("Zip code: 11413");
+  lines.push("Phone: (917) 660-6872");
+  return lines.join("\n");
 }
+---
