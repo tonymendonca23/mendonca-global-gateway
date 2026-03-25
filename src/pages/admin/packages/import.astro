@@ -1,0 +1,304 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../../components/admin/DashboardHeader.astro";
+
+const staff = Astro.locals.staff!;
+---
+
+<BaseLayout title="Import Historical Packages">
+    <div class="min-h-screen">
+        <AdminSidebar currentPath="/admin/packages" />
+
+        <main
+            class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300"
+        >
+            <DashboardHeader userName={staff.name} title="Import Packages" />
+
+            <!-- Scrollable Content -->
+            <div class="p-4 lg:p-8">
+                <div class="max-w-3xl mx-auto space-y-6">
+                    <!-- Top nav -->
+                    <div
+                        class="flex items-center gap-4 text-sm text-gray-500 mb-8"
+                    >
+                        <a
+                            href="/admin/packages"
+                            class="hover:text-primary transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Back to Packages
+                        </a>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h1
+                                class="text-2xl font-bold text-gray-900 tracking-tight"
+                            >
+                                Import Historical Packages
+                            </h1>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Upload historical data using a CSV file. Clients
+                                will <strong class="text-gray-900">NOT</strong> be
+                                emailed.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
+                    >
+                        <div
+                            class="mb-8 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800"
+                        >
+                            <h3 class="font-bold mb-2">
+                                CSV Format Requirements:
+                            </h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Headers must be in the first row.</li>
+                                <li>
+                                    Required columns (any order): <code
+                                        >customer_email</code
+                                    > OR <code>customer_id</code>, <code
+                                        >store_name</code
+                                    >, <code>description</code>, <code
+                                        >status</code
+                                    >.
+                                </li>
+                                <li>
+                                    Optional columns: <code
+                                        >mgg_tracking_number</code
+                                    >, <code>original_tracking_number</code>, <code
+                                        >weight</code
+                                    >, <code>branch</code>, <code
+                                        >registered_at</code
+                                    >.
+                                </li>
+                                <li>
+                                    Valid statuses: <code>registered</code>, <code
+                                        >at_warehouse</code
+                                    >, <code>in_transit</code>, <code
+                                        >customs</code
+                                    >, <code>ready_for_pickup</code>, <code
+                                        >delivered</code
+                                    >.
+                                </li>
+                            </ul>
+                            <div class="mt-4">
+                                <button
+                                    id="download-template"
+                                    class="text-blue-600 font-semibold hover:underline"
+                                >
+                                    Download Sample CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Upload Area -->
+                        <div
+                            id="dropzone"
+                            class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center hover:bg-gray-50 transition-colors cursor-pointer relative"
+                        >
+                            <input
+                                type="file"
+                                id="filepane"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                accept=".csv"
+                            />
+                            <div
+                                class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"
+                            >
+                                <svg
+                                    class="w-8 h-8 text-primary"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                    ></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-1">
+                                Click to upload or drag and drop
+                            </h3>
+                            <p class="text-sm text-gray-500">
+                                CSV files only (Max 5MB)
+                            </p>
+
+                            <div
+                                id="file-info"
+                                class="hidden mt-4 pt-4 border-t border-gray-200"
+                            >
+                                <p
+                                    class="text-sm font-semibold text-primary"
+                                    id="filename-display"
+                                >
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            id="status-message"
+                            class="hidden mt-6 p-4 rounded-lg text-sm font-medium"
+                        >
+                        </div>
+
+                        <div class="mt-8 flex justify-end">
+                            <button
+                                id="upload-btn"
+                                disabled
+                                class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                <span>Process Import</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const dropzone = document.getElementById("dropzone");
+            const filepane = document.getElementById(
+                "filepane",
+            ) as HTMLInputElement;
+            const fileInfo = document.getElementById("file-info");
+            const filenameDisplay = document.getElementById("filename-display");
+            const uploadBtn = document.getElementById(
+                "upload-btn",
+            ) as HTMLButtonElement;
+            const statusMessage = document.getElementById(
+                "status-message",
+            ) as HTMLDivElement;
+            const downloadTemplate =
+                document.getElementById("download-template");
+
+            // Provide template
+            downloadTemplate?.addEventListener("click", (e) => {
+                e.preventDefault();
+                const scvContent =
+                    "customer_email,store_name,description,status,mgg_tracking_number,original_tracking_number,weight,branch\njohn@example.com,Amazon,Shoes,delivered,MGG-AB1234,TBA123456789,2.5,georgetown\n";
+                const blob = new Blob([scvContent], {
+                    type: "text/csv;charset=utf-8;",
+                });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "mgg_import_template.csv");
+                link.style.visibility = "hidden";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            let selectedFile: File | null = null;
+
+            filepane.addEventListener("change", (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                handleFileSelect(file);
+            });
+
+            function handleFileSelect(file?: File) {
+                if (!file) return;
+                if (!file.name.endsWith(".csv")) {
+                    showStatus("Please select a valid CSV file.", "error");
+                    return;
+                }
+
+                selectedFile = file;
+                fileInfo?.classList.remove("hidden");
+                if (filenameDisplay)
+                    filenameDisplay.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                uploadBtn.disabled = false;
+                statusMessage.classList.add("hidden");
+            }
+
+            uploadBtn.addEventListener("click", async () => {
+                if (!selectedFile) return;
+
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = `
+          <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Processing...
+        `;
+
+                try {
+                    const text = await selectedFile.text();
+
+                    const response = await fetch("/api/admin/packages/import", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ csv: text }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showStatus(
+                            `Success! Imported ${data.inserted} packages.`,
+                            "success",
+                        );
+                        selectedFile = null;
+                        filepane.value = "";
+                        fileInfo?.classList.add("hidden");
+                    } else {
+                        showStatus(
+                            `Error: ${data.error || "Failed to import"}`,
+                            "error",
+                        );
+                        uploadBtn.disabled = false;
+                    }
+                } catch (err) {
+                    showStatus("Network error while importing.", "error");
+                    uploadBtn.disabled = false;
+                } finally {
+                    if (selectedFile === null) {
+                        uploadBtn.innerHTML = `<span>Process Import</span>`;
+                    } else {
+                        uploadBtn.innerHTML = `<span>Try Again</span>`;
+                    }
+                }
+            });
+
+            function showStatus(text: string, type: "error" | "success") {
+                statusMessage.classList.remove(
+                    "hidden",
+                    "bg-red-50",
+                    "text-red-800",
+                    "bg-green-50",
+                    "text-green-800",
+                );
+                if (type === "error") {
+                    statusMessage.classList.add("bg-red-50", "text-red-800");
+                } else {
+                    statusMessage.classList.add(
+                        "bg-green-50",
+                        "text-green-800",
+                    );
+                }
+                statusMessage.textContent = text;
+            }
+        });
+    </script>
+</BaseLayout>

@@ -264,6 +264,24 @@ export async function sendPackageStatusEmail({
         statusHeader = '📋 Package at Customs Clearance';
         statusMessage = `Your package (Tracking: <strong>${displayTracking}</strong>) has arrived in Guyana and is currently undergoing customs clearance. This process typically takes a short while. We will notify you as soon as it's ready for pickup!`;
         break;
+      case 'ready':
+        statusHeader = '🛍️ Package Ready for Pickup';
+        statusMessage = `We're pleased to inform you that your package (Tracking: <strong>${displayTracking}</strong>) has arrived and is now available for pick-up or delivery through Mendonca's Global Gateway.<br><br>
+        <strong>📍 Pickup Location & Hours</strong><br>
+        Regent Plaza (between King & Wellington Streets)<br><br>
+        <strong>Hours:</strong><br>
+        • <strong>Tuesday-Friday:</strong> 9:00 AM - 4:00 PM<br>
+        • <strong>Saturday:</strong> 9:30 AM - 4:00 PM<br>
+        • <strong>Sunday-Monday:</strong> Closed<br><br>
+        Please notify us at least <strong>30 minutes</strong> before arrival for pickup so we can locate, verify, and prepare your package for a smooth, timely handover.<br><br>
+        <strong>💼 Invoice & Payment</strong><br>
+        Attached is your invoice, which shows your shipment details and total cost. You can download and review it from your dashboard.<br><br>
+        Payment options:<br>
+        • <strong>Cash:</strong> On pickup or delivery<br>
+        • <strong>MMG+:</strong> Transfer to +592 671-7816<br>
+        (Account Name: Miguel Mendonca)<br><br>
+        Once payment is made, please send a confirmation screenshot or let us know your preferred delivery option and we'll proceed.`;
+        break;
       default:
         // Fallback for other statuses just in case
         statusHeader = '📦 Package Status Update';
@@ -301,5 +319,41 @@ export async function sendPackageStatusEmail({
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Failed to send package status email' };
+  }
+}
+
+export async function sendBroadcastEmail(
+  toEmails: string[],
+  subject: string,
+  htmlContent: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const wrappedHtml = `
+      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; color: #1a202c;">
+        ${htmlContent}
+        <p style="font-size: 13px; color: #a0aec0; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+          Mendonca Global Gateway
+        </p>
+      </div>
+    `;
+
+    // Resend allows up to 50 recipients per batch, so we batch them.
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < toEmails.length; i += BATCH_SIZE) {
+      const bccBatch = toEmails.slice(i, i + BATCH_SIZE);
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: ['info@mendonca-global-gateway.com'], // Primary to self
+        bcc: bccBatch,    // BCC the customers so they don't see each other
+        subject,
+        html: wrappedHtml,
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending broadcast email:', error);
+    return { success: false, error: 'Failed to send broadcast' };
   }
 }
