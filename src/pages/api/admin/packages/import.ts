@@ -42,8 +42,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         let inserted = 0;
 
         for (const record of records) {
-            if (!record.store_name || !record.description || !record.status) {
-                // Skip incomplete records
+            const storeName = record.store_name || 'Unknown';
+            const description = record.description || 'Imported package';
+            const statusStr = record.status || 'delivered';
+
+            if (!record.customer_email && !record.customer_id) {
+                // Must have at least an email or customer ID to assign the package
                 continue;
             }
 
@@ -100,7 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const original_tracking = record.original_tracking_number || null;
             const branch = record.branch || 'georgetown';
 
-            const status = record.status.toLowerCase();
+            const status = statusStr.toLowerCase();
             // Valid mapping check
             const validStatuses = ['registered', 'at_warehouse', 'in_transit', 'customs', 'ready_for_pickup', 'delivered'];
             const finalStatus = validStatuses.includes(status) ? status : 'delivered';
@@ -119,8 +123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 args: [
                     pkgId,
                     customerId,
-                    record.store_name,
-                    record.description,
+                    storeName,
+                    description,
                     finalStatus,
                     mgg_tracking,
                     original_tracking,
