@@ -337,18 +337,23 @@ export async function sendBroadcastEmail(
       </div>
     `;
 
-    // Resend allows up to 50 recipients per batch, so we batch them.
-    const BATCH_SIZE = 50;
+    // Resend batch API allows up to 100 emails per request
+    const BATCH_SIZE = 100;
 
     for (let i = 0; i < toEmails.length; i += BATCH_SIZE) {
-      const bccBatch = toEmails.slice(i, i + BATCH_SIZE);
-      await resend.emails.send({
+      const emailBatch = toEmails.slice(i, i + BATCH_SIZE).map((email) => ({
         from: FROM_ADDRESS,
-        to: ['info@mendonca-global-gateway.com'], // Primary to self
-        bcc: bccBatch,    // BCC the customers so they don't see each other
+        to: [email],
         subject,
         html: wrappedHtml,
-      });
+      }));
+
+      await resend.batch.send(emailBatch);
+      
+      // Small delay between batches to respect rate limits
+      if (i + BATCH_SIZE < toEmails.length) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
     }
 
     return { success: true };
