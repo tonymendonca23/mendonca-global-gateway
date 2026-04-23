@@ -98,13 +98,25 @@ if (Astro.request.method === "POST") {
 
         const totalUsd = Number((totalGyd / exchangeRate).toFixed(2));
 
-        // Generate invoice number
-        const countResult = await db.execute({
-          sql: `SELECT COUNT(*) as count FROM invoices`,
-          args: [],
+        // Generate the next invoice number from the highest sequence used this year.
+        // Using COUNT(*) breaks after deletions because it can reuse an existing number.
+        const currentYear = new Date().getFullYear();
+        const latestInvoiceResult = await db.execute({
+          sql: `
+            SELECT invoice_number
+            FROM invoices
+            WHERE invoice_number LIKE ?
+            ORDER BY CAST(SUBSTR(invoice_number, -4) AS INTEGER) DESC
+            LIMIT 1
+          `,
+          args: [`INV-${currentYear}-%`],
         });
-        const count = (countResult.rows[0] as any).count + 1;
-        createdInvoiceNumber = `INV-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`;
+
+        const latestInvoiceNumber = (latestInvoiceResult.rows[0] as any)?.invoice_number;
+        const lastSequence = latestInvoiceNumber
+          ? parseInt(String(latestInvoiceNumber).slice(-4), 10) || 0
+          : 0;
+        createdInvoiceNumber = `INV-${currentYear}-${String(lastSequence + 1).padStart(4, "0")}`;
 
         // Handle optional PDF upload (store directly in the database)
         let invoiceFileUrl: string | null = null;
@@ -233,7 +245,14 @@ if (selectedCustomerId) {
   const packagesResult = await db.execute({
     sql: `
       SELECT * FROM packages 
-      WHERE customer_id = ? AND status = 'ready' AND id NOT IN (SELECT package_id FROM invoice_line_items WHERE package_id IS NOT NULL)
+      WHERE customer_id = ?
+        AND status = 'ready'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM invoice_line_items il
+          INNER JOIN invoices i ON i.id = il.invoice_id
+          WHERE il.package_id = packages.id
+        )
       ORDER BY registered_at DESC
     `,
     args: [selectedCustomerId],
