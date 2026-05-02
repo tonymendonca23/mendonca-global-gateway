@@ -1,5 +1,33 @@
 ---
 import ContactButton from "./ContactButton.astro";
+import db from "../lib/db";
+import { DEFAULT_WAREHOUSE_ADDRESS } from "../lib/warehouse";
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+const warehouseSettingsResult = await db.execute({
+  sql: `SELECT value FROM settings WHERE key = 'warehouse_address' LIMIT 1`,
+  args: [],
+});
+
+const configuredWarehouseAddress =
+  ((warehouseSettingsResult.rows[0] as any)?.value as string | undefined)
+    ?.trim() || "";
+
+const warehouseAddressHtml = configuredWarehouseAddress
+  ? escapeHtml(configuredWarehouseAddress).replace(/\r?\n/g, "<br>\n        ")
+  : `GUY MGG<br>
+        [Your Name]<br>
+        ${DEFAULT_WAREHOUSE_ADDRESS.addressLine1}<br>
+        ${DEFAULT_WAREHOUSE_ADDRESS.city}, ${DEFAULT_WAREHOUSE_ADDRESS.state} ${DEFAULT_WAREHOUSE_ADDRESS.zipCode}<br>
+        Tel: ${DEFAULT_WAREHOUSE_ADDRESS.phone}`;
 
 // Define the FAQ item interface
 interface FAQItem {
@@ -31,11 +59,7 @@ const {
       answer: `After signing up you will receive a mailbox address. When shopping online use the following address: 
       
       <div class="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl mt-3 border border-gray-200 dark:border-slate-800 font-mono text-sm leading-relaxed"> 
-        GUY MGG<br> 
-        CO [Your Name]<br> 
-        4120 West 104 Street, Suite 20<br> 
-        Hialeah, FL 33018<br> 
-        Tel: (305) 468-3255 
+        ${warehouseAddressHtml}
       </div> 
       
       <p class="mt-3 text-sm text-primary dark:text-primary-light font-medium">Note: Replace "CO [Your Name]" with your full name when placing orders.</p>`,
@@ -47,8 +71,8 @@ const {
       
       <ul class="list-disc pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
         <li>It will be processed and consolidated with any other orders you may have (if applicable).</li> 
-        <li>The package will then be shipped to Guyana on the next available flight (Mondays and Thursdays).</li> 
-        <li>Customs clearance is handled by Guyana Freight Services Inc., and your items will be cleared on Tuesdays and Fridays.</li> 
+        <li>The package will then be shipped to Guyana on the next available Tuesday flight.</li> 
+        <li>After arrival, customs clearance is handled by Guyana Freight Services Inc., and packages are typically ready for pickup on Thursdays.</li> 
       </ul>`,
       isHtml: true,
     },
@@ -57,18 +81,19 @@ const {
       answer: `You'll only pay for: 
       
       <ul class="list-disc pl-6 mt-3 space-y-2 text-gray-600 dark:text-gray-400"> 
-        <li><span class="font-bold text-gray-900 dark:text-white">Freight Handling:</span> The cost of shipping your package from the U.S. to Guyana.</li> 
-        <li><span class="font-bold text-gray-900 dark:text-white">VAT (Value Added Tax):</span> Calculated based on the value of your item and paid after customs clearance.</li> 
-        <li><span class="font-bold text-gray-900 dark:text-white">No hidden fees:</span> What you see is what you pay!</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">Shipping:</span> The cost to move your package from the U.S. to Guyana.</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">Import:</span> Import-related charges based on the shipment and customs assessment.</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">Handling:</span> The handling fee for processing and preparing your package.</li> 
+        <li><span class="font-bold text-gray-900 dark:text-white">Duty:</span> Any customs duty applied to the items in your package.</li> 
       </ul>`,
       isHtml: true,
     },
     {
       question: "How long does it take for my package to arrive in Guyana?",
       answer: `<ul class="list-disc pl-6 space-y-2 text-gray-600 dark:text-gray-400"> 
-        <li>Flights depart the U.S. on Mondays and Thursdays.</li> 
-        <li>Customs clearance happens on Tuesdays and Fridays.</li> 
-        <li>After clearance, your package will be delivered to your address in Guyana within 1–2 business days.</li> 
+        <li>Packages typically take about 7-10 days to arrive in Guyana.</li> 
+        <li>Shipments leave on Tuesday flights, then go through customs processing after arrival.</li> 
+        <li>Packages are usually ready for pickup on Thursdays once customs clearance is completed.</li> 
       </ul>`,
       isHtml: true,
     },
