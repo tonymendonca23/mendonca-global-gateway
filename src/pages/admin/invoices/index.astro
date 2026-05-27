@@ -263,6 +263,20 @@ const STATUS_OPTIONS = {
                                 </form>
                               </>
                             )}
+                            <span class="text-gray-300">|</span>
+                            <form
+                              method="POST"
+                              action={`/api/admin/invoices/${invoice.id}/delete`}
+                              class="inline"
+                              data-confirm={`Delete invoice ${invoice.invoice_number}? This will permanently remove it and all linked line items.`}
+                            >
+                              <button 
+                                type="submit"
+                                class="text-red-600 hover:text-red-700"
+                              >
+                                Delete
+                              </button>
+                            </form>
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,10 @@
 /// <reference path="../.astro/types.d.ts" />
 /// <reference types="astro/client" />
 
+interface ImportMetaEnv {
+  readonly PUBLIC_SITE_URL?: string;
+}
+
 interface User {
     id: string;
     email: string;

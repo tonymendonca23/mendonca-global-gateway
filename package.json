@@ -10,11 +10,11 @@
     "create-admin": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
-    "@astrojs/netlify": "^6.6.4",
-    "@astrojs/react": "^4.0.0",
+    "@astrojs/netlify": "^7.0.10",
+    "@astrojs/react": "^5.0.5",
     "@libsql/client": "^0.14.0",
     "@tailwindcss/vite": "^4.2.0",
-    "astro": "^5.0.0",
+    "astro": "^6.3.8",
     "bcryptjs": "^3.0.3",
     "nanoid": "^5.0.0",
     "react": "^18.0.0",

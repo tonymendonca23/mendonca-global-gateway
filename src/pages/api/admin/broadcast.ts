@@ -20,16 +20,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
         }
 
-        // Fetch all user emails
+        // Fetch only verified customer emails — unverified accounts may bounce
+        // and damage deliverability for everyone else
         const result = await db.execute(`
-      SELECT email FROM users WHERE email IS NOT NULL AND email != ''
+      SELECT email FROM users
+      WHERE email IS NOT NULL AND email != '' AND email_verified = 1
     `);
 
         const emails = result.rows.map(row => row.email as string);
         const validEmails = emails.filter(e => e && e.includes('@'));
 
         if (validEmails.length === 0) {
-            return new Response(JSON.stringify({ error: 'No valid customer emails found' }), {
+            return new Response(JSON.stringify({ error: 'No verified customer emails found' }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -38,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Trigger the broadcast
         const res = await sendBroadcastEmail(validEmails, subject, html);
 
-        if (!res.success) {
+        if (!res.success && res.sent === 0) {
             return new Response(JSON.stringify({ error: res.error || 'Failed to dispatch emails.' }), {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' }
@@ -47,7 +49,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         return new Response(JSON.stringify({
             success: true,
-            count: validEmails.length
+            count: res.sent,
+            failed: res.failed,
+            total: validEmails.length,
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }

@@ -2,8 +2,15 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AdminSidebar from "../../components/admin/AdminSidebar.astro";
 import DashboardHeader from "../../components/admin/DashboardHeader.astro";
+import db from "../../lib/db";
 
 const staff = Astro.locals.staff!;
+
+// Count of verified customers who will receive the broadcast
+const countResult = await db.execute(
+    `SELECT COUNT(*) as total FROM users WHERE email IS NOT NULL AND email != '' AND email_verified = 1`
+);
+const verifiedCount = (countResult.rows[0] as any)?.total ?? 0;
 ---
 
 <BaseLayout title="Customer Broadcast Email - Admin">
@@ -29,6 +36,9 @@ const staff = Astro.locals.staff!;
                                 Send an email announcement to all registered
                                 customers.
                             </p>
+                        </div>
+                        <div class="bg-primary/10 text-primary text-sm font-semibold px-4 py-2 rounded-lg">
+                            {verifiedCount} verified customer{verifiedCount !== 1 ? 's' : ''} will receive this
                         </div>
                     </div>
 
@@ -71,7 +81,7 @@ const staff = Astro.locals.staff!;
                                     >
                                         <div
                                             id="editor-container"
-                                            class="min-h-[250px] bg-white rounded-b-lg"
+                                            class="min-h-62.5 bg-white rounded-b-lg"
                                         >
                                         </div>
                                     </div>
@@ -207,10 +217,10 @@ const staff = Astro.locals.staff!;
                     const data = await res.json();
 
                     if (res.ok) {
-                        showStatus(
-                            `Successfully queued broadcast to ${data.count} customers.`,
-                            "success",
-                        );
+                        const msg = data.failed > 0
+                            ? `Broadcast sent to ${data.count} customers. ${data.failed} failed — check server logs.`
+                            : `Successfully sent broadcast to ${data.count} customers.`;
+                        showStatus(msg, "success");
                         subjectInput.value = "";
                         quill.root.innerHTML = "";
                     } else {

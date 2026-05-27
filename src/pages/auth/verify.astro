@@ -1,67 +1,62 @@
 ---
-import type { APIRoute } from "astro";
 import {
   verifyMagicLink,
   createSession,
   setSessionCookie,
-  getSessionToken,
-  validateSession,
 } from "../../lib/auth";
 import db from "../../lib/db";
 import { nanoid } from "nanoid";
 import { generateWarehouseAddress } from "../../lib/warehouse";
 
-export const GET: APIRoute = async ({ url, cookies, redirect }) => {
-  const token = url.searchParams.get("token");
+const token = Astro.url.searchParams.get("token");
 
-  if (!token) {
-    return redirect("/auth/login?error=invalid_token", 302);
-  }
+if (!token) {
+  return Astro.redirect("/auth/login?error=invalid_token", 302);
+}
 
-  // Verify the magic link
-  const result = await verifyMagicLink(token);
+// Verify the magic link
+const result = await verifyMagicLink(token);
 
-  if (!result.success || !result.email) {
-    return redirect("/auth/login?error=invalid_or_expired", 302);
-  }
+if (!result.success || !result.email) {
+  return Astro.redirect("/auth/login?error=invalid_or_expired", 302);
+}
 
-  const { email, isStaff } = result;
+const { email, isStaff } = result;
 
-  // Check if user exists
-  const table = isStaff ? "staff" : "users";
-  const existingUser = await db.execute({
-    sql: `SELECT id FROM ${table} WHERE email = ?`,
-    args: [email],
-  });
+// Check if user exists
+const table = isStaff ? "staff" : "users";
+const existingUser = await db.execute({
+  sql: `SELECT id FROM ${table} WHERE email = ?`,
+  args: [email],
+});
 
-  let userId: string;
+let userId: string;
 
-  if (existingUser.rows.length === 0) {
-    // Auto-create new customers
-    if (!isStaff) {
-      userId = nanoid();
-      const warehouseAddress = generateWarehouseAddress(email.split("@")[0], null);
+if (existingUser.rows.length === 0) {
+  // Auto-create new customers
+  if (!isStaff) {
+    userId = nanoid();
+    const warehouseAddress = generateWarehouseAddress(email.split("@")[0], null);
 
-      await db.execute({
-        sql: `INSERT INTO users (id, email, name, us_warehouse_address) VALUES (?, ?, ?, ?)`,
-        args: [userId, email, email.split("@")[0], warehouseAddress],
-      });
-    } else {
-      // Staff must be created manually
-      return redirect("/admin/login?error=not_authorized", 302);
-    }
+    await db.execute({
+      sql: `INSERT INTO users (id, email, name, us_warehouse_address) VALUES (?, ?, ?, ?)`,
+      args: [userId, email, email.split("@")[0], warehouseAddress],
+    });
   } else {
-    userId = existingUser.rows[0].id as string;
+    // Staff must be created manually
+    return Astro.redirect("/admin/login?error=not_authorized", 302);
   }
+} else {
+  userId = existingUser.rows[0].id as string;
+}
 
-  // Create session
-  const sessionToken = await createSession(userId, isStaff || false);
+// Create session
+const sessionToken = await createSession(userId, isStaff || false);
 
-  // Set cookie
-  setSessionCookie(cookies, sessionToken, isStaff || false);
+// Set cookie
+setSessionCookie(Astro.cookies, sessionToken, isStaff || false);
 
-  // Redirect to dashboard
-  const dashboardPath = isStaff ? "/admin" : "/dashboard";
-  return redirect(dashboardPath, 302);
-};
+// Redirect to dashboard
+const dashboardPath = isStaff ? "/admin" : "/dashboard";
+return Astro.redirect(dashboardPath, 302);
 ---

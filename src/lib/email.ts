@@ -326,39 +326,47 @@ export async function sendBroadcastEmail(
   toEmails: string[],
   subject: string,
   htmlContent: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const wrappedHtml = `
-      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; color: #1a202c;">
-        ${htmlContent}
-        <p style="font-size: 13px; color: #a0aec0; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-          Mendonca Global Gateway
-        </p>
-      </div>
-    `;
+): Promise<{ success: boolean; sent: number; failed: number; error?: string }> {
+  const wrappedHtml = `
+    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; color: #1a202c;">
+      ${htmlContent}
+      <p style="font-size: 13px; color: #a0aec0; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+        Mendonca Global Gateway
+      </p>
+    </div>
+  `;
 
-    // Resend batch API allows up to 100 emails per request
-    const BATCH_SIZE = 100;
+  // Resend batch API allows up to 100 emails per request
+  const BATCH_SIZE = 100;
+  let sent = 0;
+  let failed = 0;
 
-    for (let i = 0; i < toEmails.length; i += BATCH_SIZE) {
-      const emailBatch = toEmails.slice(i, i + BATCH_SIZE).map((email) => ({
-        from: FROM_ADDRESS,
-        to: [email],
-        subject,
-        html: wrappedHtml,
-      }));
+  for (let i = 0; i < toEmails.length; i += BATCH_SIZE) {
+    const batchEmails = toEmails.slice(i, i + BATCH_SIZE);
+    const emailBatch = batchEmails.map((email) => ({
+      from: FROM_ADDRESS,
+      to: [email],
+      subject,
+      html: wrappedHtml,
+    }));
 
+    try {
       await resend.batch.send(emailBatch);
-      
-      // Small delay between batches to respect rate limits
-      if (i + BATCH_SIZE < toEmails.length) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+      sent += batchEmails.length;
+    } catch (batchError) {
+      console.error(`Broadcast batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, batchError);
+      failed += batchEmails.length;
     }
 
-    return { success: true };
-  } catch (error) {
-    console.error('Error sending broadcast email:', error);
-    return { success: false, error: 'Failed to send broadcast' };
+    // Small delay between batches to respect rate limits
+    if (i + BATCH_SIZE < toEmails.length) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
+
+  if (sent === 0 && failed > 0) {
+    return { success: false, sent: 0, failed, error: 'All email batches failed to send' };
+  }
+
+  return { success: true, sent, failed };
 }
