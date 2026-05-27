@@ -10,7 +10,7 @@
 # SPA fallback redirects are NOT needed and will break SSR
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # Environment variables (set in Netlify dashboard)
 # TURSO_DATABASE_URL
