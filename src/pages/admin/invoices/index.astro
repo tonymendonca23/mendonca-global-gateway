@@ -19,7 +19,12 @@ const perPage = 20;
 let countSql = `SELECT COUNT(*) as total FROM invoices i LEFT JOIN users u ON i.customer_id = u.id`;
 let sql = `
   SELECT 
-    i.*,
+    i.id, i.invoice_number, i.customer_id, i.status,
+    i.subtotal_shipping, i.subtotal_customs, i.subtotal_storage,
+    i.total_usd, i.total_gyd, i.item_count, i.weight_lbs, i.cost_per_lb,
+    i.import_handling_duty, i.duty_fee,
+    i.invoice_file_url, i.invoice_file_name,
+    i.issued_at, i.paid_at, i.notes,
     u.email as customer_email,
     u.name as customer_name,
     u.phone as customer_phone
