@@ -61,32 +61,31 @@ if (whereClauses.length > 0) {
   countSql += whereClause;
 }
 
-// Get total count
-const countResult = await db.execute({ sql: countSql, args: countArgs });
+// Add pagination & sorting definitions to list SQL
+const paginatedSql = sql + ` ORDER BY i.issued_at DESC LIMIT ? OFFSET ?`;
+const paginatedArgs = [...args, perPage, (page - 1) * perPage];
+
+const statsSql = `
+  SELECT 
+    COUNT(*) as total_invoices,
+    SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END) as unpaid_count,
+    SUM(CASE WHEN status = 'unpaid' THEN total_gyd ELSE 0 END) as unpaid_total,
+    SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+    SUM(CASE WHEN status = 'paid' THEN total_gyd ELSE 0 END) as paid_total,
+    SUM(CASE WHEN issued_at > (unixepoch() - 30*24*60*60) THEN 1 ELSE 0 END) as this_month_count
+  FROM invoices
+`;
+
+// Get total count, paginated list, and stats in parallel to prevent timeouts
+const [countResult, invoicesResult, statsResult] = await Promise.all([
+  db.execute({ sql: countSql, args: countArgs }),
+  db.execute({ sql: paginatedSql, args: paginatedArgs }),
+  db.execute({ sql: statsSql, args: [] })
+]);
+
 const total = (countResult.rows[0] as any)?.total || 0;
 const totalPages = Math.ceil(total / perPage);
-
-// Add pagination
-sql += ` ORDER BY i.issued_at DESC LIMIT ? OFFSET ?`;
-args.push(perPage, (page - 1) * perPage);
-
-const invoicesResult = await db.execute({ sql, args });
 const invoices = invoicesResult.rows;
-
-// Get stats
-const statsResult = await db.execute({
-  sql: `
-    SELECT 
-      COUNT(*) as total_invoices,
-      SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END) as unpaid_count,
-      SUM(CASE WHEN status = 'unpaid' THEN total_gyd ELSE 0 END) as unpaid_total,
-      SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
-      SUM(CASE WHEN status = 'paid' THEN total_gyd ELSE 0 END) as paid_total,
-      SUM(CASE WHEN issued_at > strftime('%s', 'now', '-30 days') THEN 1 ELSE 0 END) as this_month_count
-    FROM invoices
-  `,
-  args: [],
-});
 const stats = statsResult.rows[0] as any;
 
 // Status options

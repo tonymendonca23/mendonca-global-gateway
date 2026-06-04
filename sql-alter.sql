@@ -11,3 +11,6 @@ CREATE INDEX IF NOT EXISTS idx_email_verification_user ON email_verification_tok
 CREATE INDEX IF NOT EXISTS idx_email_verification_token ON email_verification_tokens(token_hash);
 
 ALTER TABLE invoices ADD COLUMN duty_fee INTEGER NOT NULL DEFAULT 0;
+
+-- Add index on issued_at to speed up invoice list loading and statistics
+CREATE INDEX IF NOT EXISTS idx_invoices_issued_at ON invoices(issued_at);

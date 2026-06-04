@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 
 CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_issued_at ON invoices(issued_at);
 
 -- Invoice Line Items
 CREATE TABLE IF NOT EXISTS invoice_line_items (
