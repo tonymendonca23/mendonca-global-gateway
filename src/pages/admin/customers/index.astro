@@ -21,7 +21,8 @@ let sql = `
     (SELECT COUNT(*) FROM packages WHERE customer_id = u.id) as package_count,
     (SELECT COUNT(*) FROM packages WHERE customer_id = u.id AND status = 'ready') as ready_count,
     (SELECT COUNT(*) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as unpaid_invoice_count,
-    (SELECT COALESCE(SUM(total_gyd), 0) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as total_owed
+    (SELECT COALESCE(SUM(total_gyd), 0) FROM invoices WHERE customer_id = u.id AND status = 'unpaid') as total_owed,
+    (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id) as referral_count
   FROM users u
 `;
 
@@ -140,6 +141,7 @@ const stats = statsResult.rows[0] as any;
                       <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Packages</th>
                       <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Ready</th>
                       <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Unpaid</th>
+                      <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Referrals</th>
                       <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                       <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -179,6 +181,15 @@ const stats = statsResult.rows[0] as any;
                               </span>
                               <div class="text-xs text-red-600 mt-1">{formatGYD(customer.total_owed)}</div>
                             </div>
+                          ) : (
+                            <span class="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          {customer.referral_count > 0 ? (
+                            <a href="/admin/referrals" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+                              {customer.referral_count}
+                            </a>
                           ) : (
                             <span class="text-gray-400">-</span>
                           )}

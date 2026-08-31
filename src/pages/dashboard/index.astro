@@ -49,6 +49,38 @@ packages.forEach((pkg: any) => {
     statusCounts[pkg.status]++;
   }
 });
+
+// Referral Program metrics for this customer
+const referralStatsResult = await db.execute({
+  sql: `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN credit_status = 'credited' THEN 1 ELSE 0 END) as credited,
+          SUM(CASE WHEN credit_status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN credit_status = 'credited' THEN credit_amount_gyd ELSE 0 END) as total_credits_gyd
+        FROM referrals
+        WHERE referrer_id = ?`,
+  args: [user.id],
+});
+
+const referralStats = referralStatsResult.rows[0] as any;
+const totalReferrals = Number(referralStats?.total || 0);
+const creditedReferrals = Number(referralStats?.credited || 0);
+const pendingReferrals = Number(referralStats?.pending || 0);
+const totalReferralCreditsGyd = Number(referralStats?.total_credits_gyd || 0);
+
+const referralListResult = await db.execute({
+  sql: `SELECT
+          r.credit_status,
+          r.created_at,
+          u.name as referee_name
+        FROM referrals r
+        LEFT JOIN users u ON u.id = r.referee_id
+        WHERE r.referrer_id = ?
+        ORDER BY r.created_at DESC
+        LIMIT 5`,
+  args: [user.id],
+});
+const recentReferrals = referralListResult.rows as any[];
 ---
 
 <BaseLayout title="Dashboard">
@@ -444,6 +476,106 @@ packages.forEach((pkg: any) => {
           }
         </div>
 
+        <!-- Referral Program -->
+        <div class="mt-6 rounded-xl shadow-sm p-6 bg-gradient-to-br from-primary to-primary-800 text-white">
+          <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Left: program pitch + your ID -->
+            <div class="flex-1">
+              <h2 class="text-lg font-heading font-semibold mb-1 flex items-center gap-2">
+                <span aria-hidden="true">🎁</span> Referral Program
+              </h2>
+              <p class="text-sm text-white/80 mb-5">
+                Earn $1,000 GYD off your next shipment for every friend you
+                refer — once they place and pay for their first order. No cap
+                on how many people you can refer!
+              </p>
+
+              <div class="bg-white/10 border border-white/20 rounded-xl p-4">
+                <p class="text-xs uppercase tracking-wider text-white/70 font-semibold mb-1">
+                  Your Customer Code (Referral Code)
+                </p>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <span id="referral-code-value" class="font-mono text-xl font-bold tracking-wider">
+                    {user.customer_code || "Assigned by MGG"}
+                  </span>
+                  <button
+                    type="button"
+                    id="copy-referral-code"
+                    class="btn-secondary !bg-white !text-primary hover:!bg-gray-100 text-sm px-3 py-1.5"
+                    disabled={!user.customer_code}
+                  >
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    Copy ID
+                  </button>
+                </div>
+                <p class="text-xs text-white/60 mt-2">
+                  Share this code with friends so they can enter it when signing
+                  up.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right: totals + recent referrals -->
+            <div class="flex-1">
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-white/10 border border-white/20 rounded-xl p-3 text-center">
+                  <div class="text-2xl font-bold">{totalReferrals}</div>
+                  <div class="text-xs text-white/70 mt-1">Total Referrals</div>
+                </div>
+                <div class="bg-white/10 border border-white/20 rounded-xl p-3 text-center">
+                  <div class="text-2xl font-bold text-green-300">{creditedReferrals}</div>
+                  <div class="text-xs text-white/70 mt-1">Credited</div>
+                </div>
+                <div class="bg-white/10 border border-white/20 rounded-xl p-3 text-center">
+                  <div class="text-2xl font-bold">{formatGYD(totalReferralCreditsGyd).replace("GYD ", "")}</div>
+                  <div class="text-xs text-white/70 mt-1">Credits Earned</div>
+                </div>
+              </div>
+
+              {recentReferrals.length === 0 ? (
+                <p class="text-sm text-white/70 bg-white/5 rounded-lg p-4 text-center">
+                  No referrals yet — share your Customer Code to start earning
+                  credits!
+                </p>
+              ) : (
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-white/70 font-semibold mb-2">
+                    Recent Referrals
+                  </p>
+                  <ul class="space-y-2">
+                    {recentReferrals.map((ref) => (
+                      <li class="flex items-center justify-between gap-3 text-sm bg-white/5 rounded-lg px-3 py-2">
+                        <span class="truncate">{ref.referee_name || "New customer"}</span>
+                        <span class={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                          ref.credit_status === "credited"
+                            ? "bg-green-400/20 text-green-200 border-green-300/30"
+                            : ref.credit_status === "pending"
+                              ? "bg-yellow-400/20 text-yellow-200 border-yellow-300/30"
+                              : "bg-red-400/20 text-red-200 border-red-300/30"
+                        }`}>
+                          {ref.credit_status === "credited"
+                            ? "+$1,000 GYD"
+                            : ref.credit_status === "pending"
+                              ? "Pending"
+                              : "Revoked"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {pendingReferrals > 0 && (
+                    <p class="text-xs text-white/60 mt-2">
+                      Pending credits are awarded once your friend pays for
+                      their first order.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <!-- US Warehouse Address -->
         <div class="card mt-6">
           <h2 class="text-lg font-heading font-semibold text-primary mb-4">
@@ -503,6 +635,42 @@ packages.forEach((pkg: any) => {
   if (backdrop) {
     backdrop.addEventListener("click", () => {
       toggleSidebar();
+    });
+  }
+
+  // Copy referral code (Customer Code) to clipboard
+  const copyBtn = document.getElementById("copy-referral-code");
+  const codeValue = document.getElementById("referral-code-value");
+
+  if (copyBtn && codeValue) {
+    copyBtn.addEventListener("click", async () => {
+      const code = codeValue.textContent?.trim();
+      if (!code) return;
+
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch {
+        // Fallback for browsers/contexts without clipboard API
+        const textarea = document.createElement("textarea");
+        textarea.value = code;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
+      const originalLabel = copyBtn.innerHTML;
+      copyBtn.innerHTML = `
+        <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        Copied!
+      `;
+      setTimeout(() => {
+        copyBtn.innerHTML = originalLabel;
+      }, 2000);
     });
   }
 </script>

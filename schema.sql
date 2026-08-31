@@ -12,11 +12,32 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   us_warehouse_address TEXT,
   branch_preference TEXT DEFAULT 'georgetown',
+  referred_by_id TEXT REFERENCES users(id),
   email_verified INTEGER DEFAULT 0,
   last_activity INTEGER DEFAULT (unixepoch()),
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch())
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by_id);
+
+-- Referral Program (see referrals.sql)
+CREATE TABLE IF NOT EXISTS referrals (
+  id TEXT PRIMARY KEY,
+  referrer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referee_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  referral_code TEXT,
+  credit_amount_gyd INTEGER NOT NULL DEFAULT 1000,
+  credit_status TEXT NOT NULL DEFAULT 'pending',
+  credited_at INTEGER,
+  awarded_by TEXT REFERENCES staff(id),
+  notes TEXT,
+  created_at INTEGER DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referee ON referrals(referee_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(credit_status);
 
 -- Sessions (Magic Links)
 CREATE TABLE IF NOT EXISTS sessions (

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import db from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { createSession, setSessionCookie } from '../../../../lib/auth';
+import { ensureCustomerCode } from '../../../../lib/referral';
 
 const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = import.meta.env.GOOGLE_CLIENT_SECRET;
@@ -131,6 +132,14 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
 
     // Create session
     const sessionToken = await createSession(userId, false);
+
+    // Google signups bypass the registration form, so make sure the user
+    // has a Customer Code (also their referral code).
+    try {
+      await ensureCustomerCode(userId);
+    } catch (err) {
+      console.warn('⚠️ Failed to assign customer code for Google signup:', err);
+    }
 
     // Set session cookie
     setSessionCookie(cookies, sessionToken, false);

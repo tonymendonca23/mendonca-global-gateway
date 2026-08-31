@@ -58,6 +58,31 @@ const invoicesResult = await db.execute({
   args: [customerId],
 });
 const invoices = invoicesResult.rows;
+
+// Referral data for this customer
+const referredByResult = await db.execute({
+  sql: `
+    SELECT u.name, u.customer_code
+    FROM users u
+    JOIN users c ON c.referred_by_id = u.id
+    WHERE c.id = ?
+  `,
+  args: [customerId],
+});
+const referredBy = referredByResult.rows[0] as any;
+
+const referralStatsResult = await db.execute({
+  sql: `
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN credit_status = 'credited' THEN 1 ELSE 0 END) as credited,
+      SUM(CASE WHEN credit_status = 'credited' THEN credit_amount_gyd ELSE 0 END) as total_credits_gyd
+    FROM referrals
+    WHERE referrer_id = ?
+  `,
+  args: [customerId],
+});
+const referralStats = referralStatsResult.rows[0] as any;
 ---
 
 <BaseLayout title="Customer Details">
@@ -111,7 +136,7 @@ const invoices = invoicesResult.rows;
                   <div class="font-medium">{customer.address || "-"}</div>
                 </div>
                 <div>
-                  <div class="text-sm text-gray-500">Customer ID</div>
+                  <div class="text-sm text-gray-500">Customer Code</div>
                   <div class="font-mono font-medium">
                     {customer.customer_code || "Not set"}
                   </div>
@@ -150,6 +175,58 @@ const invoices = invoicesResult.rows;
                   <span class="font-bold text-red-600"
                     >{formatGYD(customer.total_owed)}</span
                   >
+                </div>
+              </div>
+            </div>
+
+            <!-- Referrals -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mt-6">
+              <h3
+                class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 flex items-center justify-between"
+              >
+                <span>Referrals</span>
+                <a
+                  href="/admin/referrals"
+                  class="text-primary normal-case tracking-normal hover:underline font-normal"
+                >
+                  Manage →
+                </a>
+              </h3>
+
+              {
+                referredBy && (
+                  <div class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm">
+                    <div class="text-gray-500 text-xs mb-1">Referred by</div>
+                    <div class="font-medium text-gray-900">
+                      {referredBy.name || "Unknown"}{" "}
+                      {referredBy.customer_code && (
+                        <span class="font-mono text-gray-500">
+                          ({referredBy.customer_code})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+
+              <div class="space-y-4">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Total Referrals</span>
+                  <span class="font-bold text-primary">
+                    {Number(referralStats?.total || 0)}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Credited</span>
+                  <span class="font-bold text-green-600">
+                    {Number(referralStats?.credited || 0)}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Credits Earned</span>
+                  <span class="font-bold text-primary">
+                    {formatGYD(Number(referralStats?.total_credits_gyd || 0))}
+                  </span>
                 </div>
               </div>
             </div>

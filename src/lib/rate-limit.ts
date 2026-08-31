@@ -9,6 +9,9 @@ export const RATE_LIMITS = {
   REGISTER: { max: 3, windowMinutes: 60 },
   // Max 3 password resets/magic links per 1 hour per Email
   AUTH_EMAIL: { max: 3, windowMinutes: 60 },
+  // Max 20 referral code lookups per 15 minutes per IP
+  // (looser limit: signup forms debounce-validate while the user types)
+  VALIDATE_REFERRAL: { max: 20, windowMinutes: 15 },
 };
 
 /**

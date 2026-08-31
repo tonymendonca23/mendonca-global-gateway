@@ -1,0 +1,360 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminSidebar from "../../components/admin/AdminSidebar.astro";
+import DashboardHeader from "../../components/admin/DashboardHeader.astro";
+import db from "../../lib/db";
+import { formatDate, formatGYD } from "../../lib/utils";
+
+const staff = Astro.locals.staff!;
+
+const url = new URL(Astro.request.url);
+const statusFilter = url.searchParams.get("status") || "";
+
+let sql = `
+  SELECT
+    r.id,
+    r.referral_code,
+    r.credit_amount_gyd,
+    r.credit_status,
+    r.credited_at,
+    r.notes,
+    r.created_at,
+    referrer.name AS referrer_name,
+    referrer.customer_code AS referrer_customer_code,
+    referee.name AS referee_name,
+    referee.customer_code AS referee_customer_code,
+    referee.email AS referee_email,
+    referee.created_at AS referee_registered_at
+  FROM referrals r
+  LEFT JOIN users referrer ON referrer.id = r.referrer_id
+  LEFT JOIN users referee ON referee.id = r.referee_id
+`;
+
+const args: any[] = [];
+
+if (statusFilter && ["pending", "credited", "revoked"].includes(statusFilter)) {
+  sql += " WHERE r.credit_status = ?";
+  args.push(statusFilter);
+}
+
+sql += " ORDER BY r.created_at DESC LIMIT 200";
+
+const referralsResult = await db.execute({ sql, args });
+const referrals = referralsResult.rows as any[];
+
+const totalsResult = await db.execute({
+  sql: `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN credit_status = 'credited' THEN 1 ELSE 0 END) as credited,
+          SUM(CASE WHEN credit_status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN credit_status = 'revoked' THEN 1 ELSE 0 END) as revoked,
+          SUM(CASE WHEN credit_status = 'credited' THEN credit_amount_gyd ELSE 0 END) as total_credits_gyd
+        FROM referrals`,
+  args: [],
+});
+const totals = totalsResult.rows[0] as any;
+
+const statusBadge = (status: string) =>
+  status === "credited"
+    ? "bg-green-100 text-green-800"
+    : status === "pending"
+      ? "bg-yellow-100 text-yellow-800"
+      : "bg-red-100 text-red-800";
+
+const statusLabel = (status: string) =>
+  status === "credited" ? "Credited" : status === "pending" ? "Pending" : "Revoked";
+---
+
+<BaseLayout title="Referrals">
+  <div class="min-h-screen">
+    <AdminSidebar />
+
+    <main class="md:ml-64 bg-[#f1f5f9] min-h-screen transition-all duration-300">
+      <DashboardHeader
+        title="Referral Program"
+        subtitle="Track referral signups and manage $1,000 GYD referral credits"
+      >
+        <Fragment />
+      </DashboardHeader>
+
+      <div class="p-4 md:p-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Total Referrals</div>
+            <div class="text-3xl font-bold text-primary">
+              {totals?.total || 0}
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Credited</div>
+            <div class="text-3xl font-bold text-green-600">
+              {totals?.credited || 0}
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Pending</div>
+            <div class="text-3xl font-bold text-yellow-600">
+              {totals?.pending || 0}
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="text-sm text-gray-500 mb-1">Credits Awarded</div>
+            <div class="text-2xl font-bold text-primary pt-1">
+              {formatGYD(Number(totals?.total_credits_gyd || 0))}
+            </div>
+          </div>
+        </div>
+
+        <!-- Status filter tabs -->
+        <div class="bg-white rounded-lg shadow-sm p-2 mb-6 inline-flex gap-1 flex-wrap">
+          {[
+            { key: "", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "credited", label: "Credited" },
+            { key: "revoked", label: "Revoked" },
+          ].map((tab) => (
+            <a
+              href={tab.key ? `/admin/referrals?status=${tab.key}` : "/admin/referrals"}
+              class={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                statusFilter === tab.key
+                  ? "bg-primary text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </div>
+
+        <!-- Referrals table -->
+        {referrals.length === 0 ? (
+          <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div class="text-6xl mb-4">🎁</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">
+              No referrals found
+            </h3>
+            <p class="text-gray-500">
+              Referrals will appear here once new customers sign up with a
+              Customer Code.
+            </p>
+          </div>
+        ) : (
+          <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Referrer
+                    </th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Referred Customer
+                    </th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date Registered
+                    </th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Credit
+                    </th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  {referrals.map((ref) => (
+                    <tr class="hover:bg-gray-50" data-referral-row={ref.id}>
+                      <td class="px-6 py-4">
+                        <div class="font-medium text-gray-900">
+                          {ref.referrer_name || "Unknown"}
+                        </div>
+                        <div class="text-xs text-gray-400 font-mono mt-0.5">
+                          {ref.referrer_customer_code || "-"}
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <div class="font-medium text-gray-900">
+                          {ref.referee_name || "Unknown"}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-0.5">
+                          {ref.referee_customer_code || "-"} · {ref.referee_email}
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(ref.referee_registered_at || ref.created_at)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                          <span
+                            class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge(
+                              ref.credit_status,
+                            )}`}
+                          >
+                            {statusLabel(ref.credit_status)}
+                          </span>
+                          <span class="text-sm font-semibold text-gray-900">
+                            GYD ${Number(ref.credit_amount_gyd || 0).toLocaleString()}
+                          </span>
+                        </div>
+                        {ref.credited_at && (
+                          <div class="text-xs text-gray-400 mt-1">
+                            Applied {formatDate(ref.credited_at)}
+                          </div>
+                        )}
+                        {ref.notes && (
+                          <div class="text-xs text-gray-400 mt-0.5 max-w-[220px] truncate" title={ref.notes}>
+                            {ref.notes}
+                          </div>
+                        )}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex gap-2">
+                          {ref.credit_status !== "credited" && (
+                            <button
+                              type="button"
+                              class="referral-apply-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition"
+                              data-referral-id={ref.id}
+                            >
+                              Apply Credit
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            class="referral-adjust-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
+                            data-referral-id={ref.id}
+                            data-amount={ref.credit_amount_gyd}
+                          >
+                            Adjust
+                          </button>
+                          {ref.credit_status !== "revoked" && (
+                            <button
+                              type="button"
+                              class="referral-revoke-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition"
+                              data-referral-id={ref.id}
+                            >
+                              Revoke
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <p class="text-xs text-gray-400 mt-4">
+          Credits are awarded automatically when a referred customer places
+          and pays for their first order. Use the actions above to manually
+          apply, adjust or revoke credits when needed. There is no cap on how
+          many customers a referrer can refer.
+        </p>
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  async function updateReferral(
+    referralId: string,
+    payload: { status: string; credit_amount_gyd?: number; notes?: string },
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/admin/referrals/${referralId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error || "Failed to update referral credit.");
+        return false;
+      }
+      return true;
+    } catch {
+      alert("An error occurred while updating the referral.");
+      return false;
+    }
+  }
+
+  document
+    .querySelectorAll<HTMLButtonElement>(".referral-apply-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.referralId;
+        if (!id) return;
+
+        if (!confirm("Apply the referral credit to this customer?")) return;
+
+        btn.disabled = true;
+        btn.textContent = "Applying...";
+
+        const ok = await updateReferral(id, { status: "credited" });
+        if (ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          btn.textContent = "Apply Credit";
+        }
+      });
+    });
+
+  document
+    .querySelectorAll<HTMLButtonElement>(".referral-revoke-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.referralId;
+        if (!id) return;
+
+        if (!confirm("Revoke this referral credit? This can be re-applied later."))
+          return;
+
+        btn.disabled = true;
+        btn.textContent = "Revoking...";
+
+        const ok = await updateReferral(id, { status: "revoked" });
+        if (ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          btn.textContent = "Revoke";
+        }
+      });
+    });
+
+  document
+    .querySelectorAll<HTMLButtonElement>(".referral-adjust-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.referralId;
+        const currentAmount = btn.dataset.amount || "1000";
+        if (!id) return;
+
+        const raw = prompt(
+          "Set the credit amount in GYD for this referral:",
+          currentAmount,
+        );
+
+        if (raw === null) return;
+
+        const amount = Number(raw);
+        if (!Number.isFinite(amount) || amount < 0) {
+          alert("Please enter a valid non-negative amount.");
+          return;
+        }
+
+        const ok = await updateReferral(id, {
+          status: "pending",
+          credit_amount_gyd: amount,
+          notes: `Amount adjusted by admin to GYD ${amount.toLocaleString()}`,
+        });
+        if (ok) {
+          window.location.reload();
+        }
+      });
+    });
+</script>

@@ -4,6 +4,7 @@ import { hashPassword, sendVerificationEmail } from '../../../lib/auth';
 import db from '../../../lib/db';
 import { generateWarehouseAddress } from '../../../lib/warehouse';
 import { isRateLimited, getClientIp, RATE_LIMITS } from '../../../lib/rate-limit';
+import { validateReferralCode, recordReferral, generateUniqueCustomerCode } from '../../../lib/referral';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -20,13 +21,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    const { firstName, lastName, email, password, phone, address, city } = await request.json();
+    const { firstName, lastName, email, password, phone, address, city, referralCode } = await request.json();
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !phone || !city) {
       return new Response(JSON.stringify({
         success: false,
         error: 'All fields are required'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate the optional referral code (Customer Code of the referrer).
+    // This must be checked before we create the account so we can reject
+    // invalid / self-referral codes up front.
+    const referralValidation = await validateReferralCode(referralCode, email);
+    if (!referralValidation.valid) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: referralValidation.error || 'Invalid referral code'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -65,17 +80,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Generate unique customer code like MGG123456 if we don't hold one
     if (!customerCode) {
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const candidate = `MGG${Math.floor(100000 + Math.random() * 900000)}`;
-        const codeCheck = await db.execute({
-          sql: 'SELECT id FROM users WHERE customer_code = ?',
-          args: [candidate],
-        });
-        if (codeCheck.rows.length === 0) {
-          customerCode = candidate;
-          break;
-        }
-      }
+      customerCode = await generateUniqueCustomerCode();
     }
 
     const fullName = `${firstName} ${lastName}`.trim();
@@ -116,6 +121,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           0, // email_verified = false
           now,
         ],
+      });
+    }
+
+    // Persist the referral relationship (if a valid code was supplied).
+    // The credit starts as 'pending' and is awarded automatically once the
+    // referee places and pays for their first order.
+    if (referralValidation.referrerId) {
+      await recordReferral({
+        referrerId: referralValidation.referrerId,
+        refereeId: userId,
+        referralCode: referralValidation.referralCode,
       });
     }
 

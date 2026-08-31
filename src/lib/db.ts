@@ -80,3 +80,16 @@ export interface Comment {
   is_approved: number;
   created_at: number;
 }
+
+export interface Referral {
+  id: string;
+  referrer_id: string;
+  referee_id: string;
+  referral_code: string | null;
+  credit_amount_gyd: number;
+  credit_status: 'pending' | 'credited' | 'revoked';
+  credited_at: number | null;
+  awarded_by: string | null;
+  notes: string | null;
+  created_at: number;
+}

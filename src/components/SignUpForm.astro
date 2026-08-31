@@ -218,6 +218,40 @@
             </select>
           </div>
 
+          <!-- Referral Field (Optional) -->
+          <div>
+            <label
+              for="referralCode"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >Referred by someone? Enter their Customer Code (Optional)</label
+            >
+            <div class="relative">
+              <input
+                type="text"
+                id="referralCode"
+                name="referralCode"
+                maxlength="20"
+                autocomplete="off"
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-all duration-300 pr-12 font-mono uppercase placeholder:font-sans placeholder:normal-case"
+                placeholder="e.g. MGG123456"
+                aria-describedby="referralHint"
+              />
+              <span
+                id="referralStatusIcon"
+                class="absolute inset-y-0 right-0 px-3 flex items-center pointer-events-none"
+                aria-hidden="true"
+              ></span>
+            </div>
+            <p
+              id="referralHint"
+              class="mt-2 text-xs text-gray-500 dark:text-gray-400"
+            >
+              Your friend earns $1,000 GYD off their next shipment once you
+              place and pay for your first order. Leave blank if you don't
+              have one.
+            </p>
+          </div>
+
           <!-- Error Message -->
           <div
             id="errorMessage"
@@ -373,6 +407,126 @@
   const successMessage = document.getElementById("successMessage");
   const submitBtn = document.getElementById("submitBtn");
 
+  // ---- Referral code (Customer Code) live validation ----
+  const referralInput = document.getElementById(
+    "referralCode",
+  ) as HTMLInputElement | null;
+  const referralHint = document.getElementById("referralHint");
+  const referralStatusIcon = document.getElementById("referralStatusIcon");
+
+  const REFERRAL_HINT_DEFAULT =
+    referralHint?.textContent || "Leave blank if you don't have one.";
+
+  // 'idle' (empty), 'checking', 'valid', 'invalid'
+  let referralState: "idle" | "checking" | "valid" | "invalid" = "idle";
+  let referralDebounceTimer: number | undefined;
+
+  function setReferralHint(message: string, tone: "default" | "error" | "success") {
+    if (!referralHint) return;
+    referralHint.textContent = message;
+    referralHint.classList.remove("text-red-600", "dark:text-red-400", "text-green-600", "dark:text-green-400");
+    if (tone === "error") {
+      referralHint.classList.add("text-red-600", "dark:text-red-400");
+    } else if (tone === "success") {
+      referralHint.classList.add("text-green-600", "dark:text-green-400");
+    }
+  }
+
+  function setReferralIcon(state: "idle" | "checking" | "valid" | "invalid") {
+    if (!referralStatusIcon) return;
+
+    if (state === "checking") {
+      referralStatusIcon.innerHTML = `
+        <svg class="w-5 h-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+      `;
+    } else if (state === "valid") {
+      referralStatusIcon.innerHTML = `
+        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      `;
+    } else if (state === "invalid") {
+      referralStatusIcon.innerHTML = `
+        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      `;
+    } else {
+      referralStatusIcon.innerHTML = "";
+    }
+  }
+
+  async function checkReferralCode() {
+    const code = (referralInput?.value || "").trim();
+
+    if (!code) {
+      referralState = "idle";
+      setReferralHint(REFERRAL_HINT_DEFAULT, "default");
+      setReferralIcon("idle");
+      referralInput?.classList.remove("border-red-300", "dark:border-red-700", "border-green-300", "dark:border-green-700");
+      return;
+    }
+
+    referralState = "checking";
+    setReferralIcon("checking");
+    setReferralHint("Checking Customer Code...", "default");
+
+    try {
+      const res = await fetch(
+        `/api/public/validate-referral?code=${encodeURIComponent(code)}`,
+      );
+      const data = await res.json();
+
+      // Input may have changed while the request was in flight.
+      if ((referralInput?.value || "").trim() !== code) return;
+
+      if (data.valid) {
+        referralState = "valid";
+        referralInput?.classList.remove("border-red-300", "dark:border-red-700");
+        referralInput?.classList.add("border-green-300", "dark:border-green-700");
+        setReferralIcon("valid");
+        setReferralHint(
+          data.referrerName
+            ? `Referral confirmed for ${data.referrerName}. Thank them for the invite!`
+            : "Customer Code found.",
+          "success",
+        );
+      } else {
+        referralState = "invalid";
+        referralInput?.classList.remove("border-green-300", "dark:border-green-700");
+        referralInput?.classList.add("border-red-300", "dark:border-red-700");
+        setReferralIcon("invalid");
+        setReferralHint(
+          data.error || "Customer Code not found. Please double-check it.",
+          "error",
+        );
+      }
+    } catch {
+      // Network hiccup: don't block the user, the server re-validates anyway.
+      referralState = "idle";
+      setReferralIcon("idle");
+      setReferralHint(REFERRAL_HINT_DEFAULT, "default");
+    }
+  }
+
+  referralInput?.addEventListener("input", () => {
+    // Normalize to uppercase so the visible value matches Customer Codes.
+    const start = referralInput.selectionStart;
+    referralInput.value = referralInput.value.toUpperCase();
+    if (start !== null) referralInput.setSelectionRange(start, start);
+
+    window.clearTimeout(referralDebounceTimer);
+    referralDebounceTimer = window.setTimeout(checkReferralCode, 450);
+  });
+
+  referralInput?.addEventListener("blur", () => {
+    window.clearTimeout(referralDebounceTimer);
+    checkReferralCode();
+  });
+
   function showError(message: string) {
     if (errorMessage) {
       errorMessage.textContent = message;
@@ -418,6 +572,23 @@
       return;
     }
 
+    // Referral code: block submission if we already know it's invalid, and
+    // re-check anything that was typed but never validated.
+    if (referralInput) {
+      const referralValue = referralInput.value.trim();
+      if (referralValue && referralState !== "valid") {
+        await checkReferralCode();
+        if (referralState === "invalid") {
+          showError("Please enter a valid referral Customer Code or leave it blank.");
+          referralInput.focus();
+          return;
+        }
+        if (referralState === "checking") {
+          // Still resolving: let the server make the final call.
+        }
+      }
+    }
+
     // Disable button
     if (submitBtn) {
       submitBtn.setAttribute("disabled", "true");
@@ -436,6 +607,7 @@
           phone: formData.get("phone"),
           address: formData.get("address"),
           city: formData.get("city"),
+          referralCode: (formData.get("referralCode") as string) || "",
         }),
       });
 
